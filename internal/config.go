@@ -17,7 +17,6 @@ type Config struct {
 
 // LocationConfig holds geographic location settings.
 type LocationConfig struct {
-	Name      string  `yaml:"name"`
 	Latitude  float64 `yaml:"latitude"`
 	Longitude float64 `yaml:"longitude"`
 	Timezone  string  `yaml:"timezone"`
