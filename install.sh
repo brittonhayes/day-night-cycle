@@ -128,6 +128,7 @@ if [ -z "$SKIP_CONFIG" ]; then
     done
 
     cat > "$INSTALL_DIR/config.yaml" <<EOF
+# yaml-language-server: \$schema=https://raw.githubusercontent.com/brittonhayes/day-night-cycle/main/config.schema.json
 location:
   name: "User Location"
   latitude: $latitude

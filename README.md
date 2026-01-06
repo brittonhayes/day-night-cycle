@@ -27,11 +27,22 @@ This will:
 - Remove `~/.config/day-night-cycle/`
 - Remove `~/Library/LaunchAgents/com.daynightcycle.schedule.plist`
 
+## Supported Plugins
+
+- **iterm2** - iTerm2 terminal
+- **cursor** - Cursor editor (supports arbitrary settings)
+- **claude-code** - Claude Code editor (supports arbitrary settings)
+- **neovim** - Neovim editor
+- **macos-system** - macOS system appearance
+- **sublime** - Sublime Text editor (supports arbitrary settings)
+- **pycharm** - PyCharm IDE (supports arbitrary settings)
+
 ## Configure
 
 Edit `~/.config/day-night-cycle/config.yaml`:
 
 ```yaml
+# yaml-language-server: $schema=https://raw.githubusercontent.com/brittonhayes/day-night-cycle/main/config.schema.json
 location:
   latitude: 46.0645
   longitude: -118.3430
@@ -65,6 +76,7 @@ plugins:
 For plugins that use JSON settings files (like Cursor and Claude Code), you can configure arbitrary settings changes using the `custom` field:
 
 ```yaml
+# yaml-language-server: $schema=https://raw.githubusercontent.com/brittonhayes/day-night-cycle/main/config.schema.json
 plugins:
   - name: cursor
     enabled: true
