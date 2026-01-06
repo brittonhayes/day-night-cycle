@@ -15,9 +15,9 @@ class PluginManager:
 
     def discover_plugins(self):
         """Automatically discover all available plugins."""
-        from . import iterm2, claude_code, cursor
+        from . import iterm2, claude_code, cursor, neovim, macos_system
 
-        modules = [iterm2, claude_code, cursor]
+        modules = [iterm2, claude_code, cursor, neovim, macos_system]
 
         for module in modules:
             for name, obj in inspect.getmembers(module, inspect.isclass):
