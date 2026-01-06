@@ -1,14 +1,45 @@
 #!/bin/bash
 set -e
 
+INSTALL_DIR="$HOME/.config/day-night-cycle"
+BINARY_NAME="day-night-cycle"
+REPO="brittonhayes/day-night-cycle"
+PLIST_PATH="$HOME/Library/LaunchAgents/com.daynightcycle.schedule.plist"
+
+# Handle uninstall
+if [ "$1" = "--uninstall" ]; then
+    echo "=========================================="
+    echo "day-night-cycle uninstallation"
+    echo "=========================================="
+    echo ""
+
+    # Unload launchd agent
+    if [ -f "$PLIST_PATH" ]; then
+        echo "Unloading launchd agent..."
+        launchctl unload "$PLIST_PATH" 2>/dev/null || true
+        rm "$PLIST_PATH"
+        echo "Removed: $PLIST_PATH"
+    fi
+
+    # Remove installation directory
+    if [ -d "$INSTALL_DIR" ]; then
+        echo "Removing installation directory..."
+        rm -rf "$INSTALL_DIR"
+        echo "Removed: $INSTALL_DIR"
+    fi
+
+    echo ""
+    echo "=========================================="
+    echo "Uninstallation complete!"
+    echo "=========================================="
+    exit 0
+fi
+
 echo "=========================================="
 echo "day-night-cycle installation (Go version)"
 echo "=========================================="
 echo ""
 
-INSTALL_DIR="$HOME/.config/day-night-cycle"
-BINARY_NAME="day-night-cycle"
-REPO="brittonhayes/day-night-cycle"
 ARCH=$(uname -m)
 
 # Detect architecture
@@ -144,7 +175,6 @@ if ! "$INSTALL_DIR/$BINARY_NAME" --config "$INSTALL_DIR/config.yaml" schedule; t
 fi
 
 # Load launchd agent
-PLIST_PATH="$HOME/Library/LaunchAgents/com.daynightcycle.schedule.plist"
 echo ""
 echo "Loading launchd agent..."
 launchctl unload "$PLIST_PATH" 2>/dev/null || true
@@ -168,7 +198,5 @@ echo ""
 echo "Configuration file: $INSTALL_DIR/config.yaml"
 echo ""
 echo "To uninstall:"
-echo "  launchctl unload $PLIST_PATH"
-echo "  rm -rf $INSTALL_DIR"
-echo "  rm $PLIST_PATH"
+echo "  curl -fsSL https://raw.githubusercontent.com/$REPO/main/install.sh | bash -s -- --uninstall"
 echo ""
