@@ -110,24 +110,25 @@ func applyMode(cfg internal.Config, isLight bool) {
 	success := 0
 	total := 0
 
-	for _, pluginCfg := range cfg.Plugins {
-		if !pluginCfg.Enabled {
+	for _, pluginEntry := range cfg.Plugins {
+		if !pluginEntry.Enabled {
 			continue
 		}
 
-		pluginFunc, exists := plugins.Registry[pluginCfg.Name]
+		pluginFunc, exists := plugins.Registry[pluginEntry.Name]
 		if !exists {
-			fmt.Printf("  ✗ %s: unknown plugin\n", pluginCfg.Name)
+			fmt.Printf("  ✗ %s: unknown plugin\n", pluginEntry.Name)
 			continue
 		}
 
 		total++
-		config := plugins.NewPluginConfig(pluginCfg.Config, isLight)
+		config := pluginEntry.PluginConfig
+		config.IsLight = isLight
 		err := pluginFunc(config)
 		if err != nil {
-			fmt.Printf("  ✗ %s: %v\n", pluginCfg.Name, err)
+			fmt.Printf("  ✗ %s: %v\n", pluginEntry.Name, err)
 		} else {
-			fmt.Printf("  ✓ %s\n", pluginCfg.Name)
+			fmt.Printf("  ✓ %s\n", pluginEntry.Name)
 			success++
 		}
 	}
@@ -181,9 +182,9 @@ func runStatus(configPath string) {
 	fmt.Printf("Next transition: %s (%s)\n", next.Format("3:04 PM"), kind)
 
 	fmt.Println("\nConfigured plugins:")
-	for _, pluginCfg := range cfg.Plugins {
-		if pluginCfg.Enabled {
-			fmt.Printf("  • %s\n", pluginCfg.Name)
+	for _, pluginEntry := range cfg.Plugins {
+		if pluginEntry.Enabled {
+			fmt.Printf("  • %s\n", pluginEntry.Name)
 		}
 	}
 	fmt.Println()

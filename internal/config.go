@@ -6,13 +6,14 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/brittonhayes/day-night-cycle/plugins"
 	"gopkg.in/yaml.v3"
 )
 
 // Config represents the YAML configuration.
 type Config struct {
-	Location LocationConfig `yaml:"location"`
-	Plugins  []PluginConfig `yaml:"plugins"`
+	Location LocationConfig      `yaml:"location"`
+	Plugins  []ConfigPluginEntry `yaml:"plugins"`
 }
 
 // LocationConfig holds geographic location settings.
@@ -22,11 +23,11 @@ type LocationConfig struct {
 	Timezone  string  `yaml:"timezone"`
 }
 
-// PluginConfig holds configuration for a single plugin.
-type PluginConfig struct {
-	Name    string                 `yaml:"name"`
-	Enabled bool                   `yaml:"enabled"`
-	Config  map[string]interface{} `yaml:",inline"`
+// ConfigPluginEntry wraps plugins.PluginConfig with Name and Enabled fields for YAML config.
+type ConfigPluginEntry struct {
+	Name    string `yaml:"name"`
+	Enabled bool   `yaml:"enabled"`
+	plugins.PluginConfig `yaml:",inline"`
 }
 
 // DefaultPath returns the default configuration file path.

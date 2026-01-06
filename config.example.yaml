@@ -13,21 +13,16 @@ location:
 # Plugin configuration
 # Enable/disable plugins as needed
 #
-# Each plugin receives:
-#   - Light/Dark values: Extracted from light_* and dark_* keys
-#   - Custom config: All other plugin-specific settings
-#
-# Common patterns for light/dark values:
-#   - light_theme / dark_theme
-#   - light_preset / dark_preset
-#   - light_colorscheme / dark_colorscheme
-#   - light / dark
+# Each plugin uses:
+#   - light: The theme/preset/colorscheme name for light mode
+#   - dark: The theme/preset/colorscheme name for dark mode
+#   - custom: Additional plugin-specific settings (optional)
 plugins:
   # iTerm2 color preset switcher
   - name: iterm2
     enabled: true
-    light_preset: "Light Background"  # Your light preset name
-    dark_preset: "Dark Background"    # Your dark preset name
+    light: "Light Background"  # Your light preset name
+    dark: "Dark Background"    # Your dark preset name
 
   # Claude Code theme switcher
   - name: claude-code
@@ -37,20 +32,21 @@ plugins:
   # Cursor/VS Code theme switcher
   - name: cursor
     enabled: true
-    light_theme: "Light Modern"  # Your preferred light theme name
-    dark_theme: "Cursor Dark"    # Your preferred dark theme name
+    light: "Light Modern"  # Your preferred light theme name
+    dark: "Cursor Dark"    # Your preferred dark theme name
 
   # Neovim colorscheme switcher
   - name: neovim
     enabled: false
-    light_colorscheme: "dayfox"   # Optional: specific light colorscheme
-    dark_colorscheme: "nightfox"  # Optional: specific dark colorscheme
+    light: "dayfox"   # Optional: specific light colorscheme
+    dark: "nightfox"  # Optional: specific dark colorscheme
 
   # macOS system appearance
   - name: macos-system
     enabled: false
-    light_wallpaper: "~/Pictures/light-wallpaper.jpg"  # Optional
-    dark_wallpaper: "~/Pictures/dark-wallpaper.jpg"    # Optional
+    custom:
+      light_wallpaper: "~/Pictures/light-wallpaper.jpg"  # Optional
+      dark_wallpaper: "~/Pictures/dark-wallpaper.jpg"    # Optional
 
 # To add a new plugin:
 # 1. Create a new plugin function in plugins/

@@ -8,11 +8,12 @@ import (
 )
 
 // PluginConfig provides theme configuration to plugins.
+// This is the source of truth for plugin configuration structure.
 type PluginConfig struct {
-	IsLight bool           // Whether to apply light mode
-	Light   string         // Primary light mode value (theme/preset/colorscheme)
-	Dark    string         // Primary dark mode value (theme/preset/colorscheme)
-	Custom  map[string]any // Additional plugin-specific configuration
+	IsLight bool           `yaml:"-"`              // Whether to apply light mode (set at runtime)
+	Light   string         `yaml:"light,omitempty"` // Primary light mode value (theme/preset/colorscheme)
+	Dark    string         `yaml:"dark,omitempty"`  // Primary dark mode value (theme/preset/colorscheme)
+	Custom  map[string]any `yaml:"custom,omitempty"` // Additional plugin-specific configuration
 }
 
 // Plugin is the signature for all plugin functions.
@@ -25,43 +26,6 @@ var Registry = map[string]Plugin{
 	"claude-code":  ClaudeCode,
 	"neovim":       Neovim,
 	"macos-system": MacOSSystem,
-}
-
-// NewPluginConfig creates a PluginConfig from plugin configuration.
-func NewPluginConfig(pluginCfg map[string]interface{}, isLight bool) PluginConfig {
-	config := PluginConfig{
-		IsLight: isLight,
-		Custom:  make(map[string]any),
-	}
-
-	lightKeys := []string{"light", "light_theme", "light_preset", "light_colorscheme"}
-	darkKeys := []string{"dark", "dark_theme", "dark_preset", "dark_colorscheme"}
-
-	extractedKeys := make(map[string]bool)
-
-	for _, key := range lightKeys {
-		if val, ok := pluginCfg[key].(string); ok {
-			config.Light = val
-			extractedKeys[key] = true
-			break
-		}
-	}
-
-	for _, key := range darkKeys {
-		if val, ok := pluginCfg[key].(string); ok {
-			config.Dark = val
-			extractedKeys[key] = true
-			break
-		}
-	}
-
-	for k, v := range pluginCfg {
-		if !extractedKeys[k] {
-			config.Custom[k] = v
-		}
-	}
-
-	return config
 }
 
 func UpdateJSONTheme(path, key, value string) error {
