@@ -120,30 +120,44 @@ make install
 
 ### Core Files Structure
 
-- **main.go**: Entry point, CLI argument parsing, command routing, config loading, and command implementations (auto, light, dark, status, next, schedule)
-- **plugins.go**: Plugin system with registry map. Each plugin is a function with signature `func(cfg map[string]interface{}, isLight bool) error`. Includes helper functions for JSON theme updates and path expansion
-- **solar.go**: Solar time calculations using astronomical algorithms (Julian Day, equation of time, hour angle, sun declination)
-- **schedule.go**: Generates macOS launchd plist files for automatic scheduling at sunrise/sunset times
+- **cmd/day-night-cycle/main.go**: Entry point, CLI argument parsing, command routing, config loading, and command implementations (auto, light, dark, status, next, schedule)
+- **plugins/plugin.go**: Plugin system with registry map. Each plugin is a function with signature `func(config PluginConfig) error`. Includes helper functions for JSON theme updates, arbitrary settings updates, and path expansion
+- **plugins/*.go**: Individual plugin implementations (cursor, claude-code, iterm2, neovim, macos-system, sublime, pycharm)
+- **internal/solar.go**: Solar time calculations using astronomical algorithms (Julian Day, equation of time, hour angle, sun declination)
+- **internal/schedule.go**: Generates macOS launchd plist files for automatic scheduling at sunrise/sunset times
+- **internal/config.go**: Configuration loading and parsing
 
 ### Plugin System
 
-Plugins are registered in a global `plugins` map in plugins.go:
+Plugins are registered in the `Registry` map in plugins/plugin.go:
 ```go
-var plugins = map[string]PluginFunc{
-    "iterm2":       iterm2Plugin,
-    "cursor":       cursorPlugin,
-    "claude-code":  claudeCodePlugin,
-    "neovim":       neovimPlugin,
-    "macos-system": macosSystemPlugin,
+var Registry = map[string]Plugin{
+    "iterm2":       ITerm2,
+    "cursor":       Cursor,
+    "claude-code":  ClaudeCode,
+    "neovim":       Neovim,
+    "macos-system": MacOSSystem,
+    "sublime":      Sublime,
+    "pycharm":      PyCharm,
 }
 ```
 
-Each plugin receives:
-- `cfg map[string]interface{}`: Plugin-specific config values from YAML
-- `isLight bool`: true for light mode, false for dark mode
+Each plugin receives a `PluginConfig` struct:
+```go
+type PluginConfig struct {
+    IsLight bool           // Whether to apply day mode (set at runtime)
+    Day     string         // Primary day mode value (theme/preset/colorscheme)
+    Night   string         // Primary night mode value (theme/preset/colorscheme)
+    Custom  map[string]any // Additional plugin-specific configuration
+}
+```
+
+The `Custom` field supports mode-specific settings using `day` and `night` keys for arbitrary JSON settings changes.
 
 Common plugin patterns:
-- **JSON settings**: Use `updateJSONTheme()` helper for JSON config files
+- **JSON settings (single key)**: Use `UpdateJSONTheme(path, key, value)` helper
+- **JSON settings (multiple keys)**: Use `UpdateJSONSettings(path, settings)` helper for arbitrary settings
+- **Mode-specific settings**: Use `config.GetModeSettings()` to extract day/night settings from `Custom` field
 - **AppleScript**: Use `exec.Command("osascript", "-e", script)` for macOS apps
 - **File writes**: Write Lua/config files directly and optionally notify running processes
 
@@ -151,8 +165,8 @@ Common plugin patterns:
 
 1. Load YAML from `~/.config/day-night-cycle/config.yaml` (default path)
 2. Parse into `Config` struct with location and plugins array
-3. For each enabled plugin, look up function in registry and call with plugin config
-4. Each plugin extracts its specific config values using type assertions
+3. For each enabled plugin, look up function in Registry and call with PluginConfig
+4. Plugins can use simple `day`/`night` strings or complex `custom.day`/`custom.night` maps for arbitrary settings
 
 ### Solar Time Calculations
 
@@ -166,8 +180,8 @@ The solar.go file implements standard astronomical algorithms:
 ## Adding a New Plugin
 
 1. **Research first**: Find config file locations, APIs, or AppleScript commands
-2. **Implement function** in plugins.go with signature `func [appName]Plugin(cfg map[string]interface{}, isLight bool) error`
-3. **Register in map**: Add to `plugins` map in plugins.go
+2. **Implement function** in plugins/[app].go with signature `func AppName(config PluginConfig) error`
+3. **Register in map**: Add to `Registry` map in plugins/plugin.go
 4. **Test thoroughly**: Build and test both light and dark modes
 5. **Use the /add-plugin skill** for guided plugin creation
 
@@ -189,6 +203,8 @@ The release target builds for both architectures and creates a GitHub release wi
 ## Configuration Example
 
 Config is YAML at `~/.config/day-night-cycle/config.yaml`:
+
+### Simple theme-only configuration:
 ```yaml
 location:
   latitude: 46.0645
@@ -198,8 +214,42 @@ location:
 plugins:
   - name: iterm2
     enabled: true
-    light_preset: "Light Background"
-    dark_preset: "Dark Background"
+    day: "Light Background"
+    night: "Dark Background"
+
+  - name: cursor
+    enabled: true
+    day: "Light Modern"
+    night: "Cursor Dark"
 ```
 
-Each plugin's config is passed as a map to its function.
+### Arbitrary settings configuration:
+For plugins that use JSON settings files, you can configure arbitrary settings changes using the `custom` field:
+
+```yaml
+plugins:
+  - name: cursor
+    enabled: true
+    custom:
+      day:
+        workbench.colorTheme: "Default Light+"
+        editor.fontSize: 14
+        zenMode.fullScreen: false
+      night:
+        workbench.colorTheme: "Default Dark+"
+        editor.fontSize: 16
+        zenMode.fullScreen: true
+        editor.lineHeight: 1.6
+
+  - name: claude-code
+    enabled: true
+    custom:
+      day:
+        theme: "light"
+        editor.fontSize: 13
+      night:
+        theme: "dark"
+        editor.fontSize: 15
+```
+
+This allows changing any settings in the application's `settings.json` file based on time of day, not just the theme.

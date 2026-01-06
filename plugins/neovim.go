@@ -9,11 +9,11 @@ import (
 
 func Neovim(config PluginConfig) error {
 	mode := "dark"
-	colorscheme := config.Dark
+	colorscheme := config.Night
 
 	if config.IsLight {
 		mode = "light"
-		colorscheme = config.Light
+		colorscheme = config.Day
 	}
 
 	home, err := os.UserHomeDir()

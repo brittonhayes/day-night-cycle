@@ -16,10 +16,10 @@ func PyCharm(config PluginConfig) error {
 	}
 
 	// Allow custom theme class names via config
-	if config.IsLight && config.Light != "" {
-		themeID = config.Light
-	} else if !config.IsLight && config.Dark != "" {
-		themeID = config.Dark
+	if config.IsLight && config.Day != "" {
+		themeID = config.Day
+	} else if !config.IsLight && config.Night != "" {
+		themeID = config.Night
 	}
 
 	home, err := os.UserHomeDir()
