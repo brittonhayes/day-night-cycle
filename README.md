@@ -87,4 +87,4 @@ Import in `day_night_cycle/plugins/__init__.py` and add to config.
 
 ## License
 
-MIT
+This project is released into the public domain under the [Unlicense](.github/LICENSE).
