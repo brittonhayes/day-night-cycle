@@ -1,0 +1,36 @@
+# Day/Night Cycle Configuration Example
+# Copy this file to config.yaml and customize for your setup
+
+# Your location coordinates and timezone
+# Find your coordinates: https://www.latlong.net/
+# Find your timezone: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
+location:
+  name: "Your City"
+  latitude: 0.0  # Replace with your latitude
+  longitude: 0.0  # Replace with your longitude
+  timezone: "America/New_York"  # Replace with your timezone
+
+# Plugin configuration
+# Enable/disable plugins as needed
+plugins:
+  # iTerm2 color preset switcher
+  - name: iterm2
+    enabled: true
+    light_preset: "Light Background"  # Your light preset name (run scripts/list_iterm_presets.py to see options)
+    dark_preset: "Dark Background"  # Your dark preset name
+
+  # Claude Code theme switcher
+  - name: claude-code
+    enabled: true
+
+  # Cursor/VS Code theme switcher
+  - name: cursor
+    enabled: true
+    light_theme: "GitHub Light"  # Your preferred light theme name
+    dark_theme: "Dark Modern"     # Your preferred dark theme name
+
+# To add a new plugin:
+# 1. Create a new file in day_night_cycle/plugins/
+# 2. Inherit from the Plugin base class
+# 3. Implement set_light_mode() and set_dark_mode()
+# 4. Add configuration here
