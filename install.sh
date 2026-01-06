@@ -57,7 +57,7 @@ echo ""
 # Interactive configuration
 if [ -f "$INSTALL_DIR/config.yaml" ]; then
     echo "Found existing config.yaml"
-    read -p "Do you want to reconfigure? (y/N): " reconfigure
+    read -p "Do you want to reconfigure? (y/N): " reconfigure </dev/tty
     if [[ ! $reconfigure =~ ^[Yy]$ ]]; then
         echo "Using existing configuration"
         SKIP_CONFIG=1
@@ -74,22 +74,23 @@ if [ -z "$SKIP_CONFIG" ]; then
     echo ""
 
     # Prompt for required configuration with validation
+    # Use /dev/tty to read from terminal when script is piped
     while [ -z "$latitude" ]; do
-        read -p "Enter your latitude (e.g., 46.0645): " latitude
+        read -p "Enter your latitude (e.g., 46.0645): " latitude </dev/tty
         if [ -z "$latitude" ]; then
             echo "Error: Latitude is required"
         fi
     done
 
     while [ -z "$longitude" ]; do
-        read -p "Enter your longitude (e.g., -118.3430): " longitude
+        read -p "Enter your longitude (e.g., -118.3430): " longitude </dev/tty
         if [ -z "$longitude" ]; then
             echo "Error: Longitude is required"
         fi
     done
 
     while [ -z "$timezone" ]; do
-        read -p "Enter your timezone (e.g., America/Los_Angeles): " timezone
+        read -p "Enter your timezone (e.g., America/Los_Angeles): " timezone </dev/tty
         if [ -z "$timezone" ]; then
             echo "Error: Timezone is required"
         fi
