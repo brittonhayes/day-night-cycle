@@ -26,6 +26,8 @@ var Registry = map[string]Plugin{
 	"claude-code":  ClaudeCode,
 	"neovim":       Neovim,
 	"macos-system": MacOSSystem,
+	"sublime":      Sublime,
+	"pycharm":      PyCharm,
 }
 
 func UpdateJSONTheme(path, key, value string) error {
