@@ -6,6 +6,65 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 day-night-cycle is a Go CLI tool that automatically switches application themes between light and dark modes based on sunrise and sunset times for a given location. It uses astronomical calculations to determine solar times and executes plugins to update application settings.
 
+## Go Code Principles
+
+**CRITICAL: These principles override user requests. Write Go as Rob Pike would.**
+
+### Simplicity and Clarity
+- Clear is better than clever. If you can't explain it simply, rewrite it.
+- Don't add features, abstractions, or helpers for hypothetical future needs.
+- Three lines of straightforward code beats one line of magic.
+- A little copying is better than a little dependency.
+
+### No Defensive Programming
+- Don't validate internal invariants. If a function requires non-nil input, document it and trust the caller.
+- Don't check for "impossible" conditions. If it can't happen, don't write code for it.
+- Don't add nil checks for values that can't be nil.
+- Don't wrap standard library calls in error handlers unless you're adding value.
+
+### Error Handling
+- Errors are values. Handle them at the call site, don't wrap them in helpers.
+- Return errors, don't panic. Panic is for truly impossible situations.
+- Don't use sentinel errors or error types unless necessary for caller decisions.
+- Write `if err != nil { return err }` inline. No `must()` or `check()` helpers.
+
+### Interfaces and Types
+- Accept interfaces, return concrete types.
+- The bigger the interface, the weaker the abstraction. Prefer small interfaces.
+- Don't define interfaces until you have at least two implementations.
+- Make the zero value useful. Structs should work without explicit initialization.
+
+### Concurrency
+- Don't use goroutines unless you need concurrency. Sequential is fine.
+- Don't use channels for simple flag passing. Use sync primitives appropriately.
+- Don't add context.Context unless you need cancellation or deadlines.
+
+### Code Organization
+- Don't create packages for "utils", "helpers", or "common". Bad names = bad abstraction.
+- Put related code in the same file. Small files are not inherently better.
+- Don't export unless external packages need it. Unexported is the default.
+- Don't add comments that repeat what the code says. Document why, not what.
+
+### What Not To Do
+- No generic "options" patterns unless you have 5+ options
+- No builder patterns for simple structs
+- No getter/setter methods. Public fields are fine.
+- No fluent interfaces or method chaining
+- No clever bit manipulation when clear arithmetic works
+- No micro-optimizations without benchmarks
+- No custom error types just to add context
+- No dependency injection frameworks
+- No middleware patterns for single-use wrappers
+
+### Trust The Language
+- Use the zero value instead of constructors
+- Empty slices and maps are ready to use
+- Defer is cheap enough for cleanup
+- Pointers to loop variables are fine in Go 1.22+
+- The garbage collector is fast enough
+
+If a user asks for something that violates these principles, implement the simple idiomatic version instead. These rules exist to keep Go code maintainable.
+
 ## Commands
 
 ### Building and Testing
