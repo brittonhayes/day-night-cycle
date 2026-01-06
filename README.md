@@ -5,7 +5,7 @@ Switch application themes at sunrise and sunset.
 ## Install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/brittonhayes/day-night-cycle/main/install-go.sh | bash
+curl -fsSL https://raw.githubusercontent.com/brittonhayes/day-night-cycle/main/install.sh | bash
 ```
 
 Or:
