@@ -40,25 +40,57 @@ location:
 plugins:
   - name: iterm2
     enabled: true
-    light_preset: "Light Background"
-    dark_preset: "Dark Background"
+    day: "Light Background"
+    night: "Dark Background"
 
   - name: cursor
     enabled: true
-    light_theme: "Light Modern"
-    dark_theme: "Cursor Dark"
+    day: "Light Modern"
+    night: "Cursor Dark"
 
   - name: claude-code
     enabled: true
 
   - name: neovim
     enabled: true
-    light_colorscheme: "github_light"
-    dark_colorscheme: "github_dark_default"
+    day: "github_light"
+    night: "github_dark_default"
 
   - name: macos-system
     enabled: false
 ```
+
+### Arbitrary Settings
+
+For plugins that use JSON settings files (like Cursor and Claude Code), you can configure arbitrary settings changes using the `custom` field:
+
+```yaml
+plugins:
+  - name: cursor
+    enabled: true
+    custom:
+      day:
+        workbench.colorTheme: "Default Light+"
+        editor.fontSize: 14
+        zenMode.fullScreen: false
+      night:
+        workbench.colorTheme: "Default Dark+"
+        editor.fontSize: 16
+        zenMode.fullScreen: true
+        editor.lineHeight: 1.6
+
+  - name: claude-code
+    enabled: true
+    custom:
+      day:
+        theme: "light"
+        editor.fontSize: 13
+      night:
+        theme: "dark"
+        editor.fontSize: 15
+```
+
+This allows you to change any settings in the application's `settings.json` file based on the time of day, not just the theme.
 
 ## Use
 

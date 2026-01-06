@@ -6,11 +6,11 @@ import (
 )
 
 func Sublime(config PluginConfig) error {
-	colorScheme := config.Dark
+	colorScheme := config.Night
 	defaultScheme := "Monokai.sublime-color-scheme"
 
 	if config.IsLight {
-		colorScheme = config.Light
+		colorScheme = config.Day
 		defaultScheme = "Breakers.sublime-color-scheme"
 	}
 

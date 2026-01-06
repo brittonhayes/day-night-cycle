@@ -6,15 +6,15 @@ import (
 )
 
 func ITerm2(config PluginConfig) error {
-	preset := config.Dark
+	preset := config.Night
 	if config.IsLight {
-		preset = config.Light
+		preset = config.Day
 	}
 
 	if preset == "" {
-		mode := "dark"
+		mode := "night"
 		if config.IsLight {
-			mode = "light"
+			mode = "day"
 		}
 		return fmt.Errorf("missing %s preset configuration", mode)
 	}
