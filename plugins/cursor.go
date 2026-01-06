@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 )
 
-// Cursor updates Cursor settings.json.
 func Cursor(config PluginConfig) error {
 	theme := config.Dark
 	defaultTheme := "Default Dark+"
@@ -20,8 +19,13 @@ func Cursor(config PluginConfig) error {
 		theme = defaultTheme
 	}
 
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
+
 	settingsPath := filepath.Join(
-		os.Getenv("HOME"),
+		home,
 		"Library/Application Support/Cursor/User/settings.json",
 	)
 

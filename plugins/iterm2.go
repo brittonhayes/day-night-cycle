@@ -5,7 +5,6 @@ import (
 	"os/exec"
 )
 
-// ITerm2 switches iTerm2 color presets via AppleScript.
 func ITerm2(config PluginConfig) error {
 	preset := config.Dark
 	if config.IsLight {

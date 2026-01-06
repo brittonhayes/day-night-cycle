@@ -64,7 +64,6 @@ func NewPluginConfig(pluginCfg map[string]interface{}, isLight bool) PluginConfi
 	return config
 }
 
-// UpdateJSONTheme updates a JSON file with a new theme value.
 func UpdateJSONTheme(path, key, value string) error {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -94,14 +93,13 @@ func UpdateJSONTheme(path, key, value string) error {
 	return nil
 }
 
-// ExpandPath handles ~ expansion in file paths.
-func ExpandPath(path string) string {
+func ExpandPath(path string) (string, error) {
 	if len(path) > 0 && path[0] == '~' {
 		home, err := os.UserHomeDir()
 		if err != nil {
-			return path
+			return "", err
 		}
-		return filepath.Join(home, path[1:])
+		return filepath.Join(home, path[1:]), nil
 	}
-	return path
+	return path, nil
 }

@@ -6,7 +6,6 @@ import (
 	"os/exec"
 )
 
-// MacOSSystem sets system-wide appearance.
 func MacOSSystem(config PluginConfig) error {
 	darkMode := "true"
 	if config.IsLight {
@@ -33,7 +32,10 @@ end tell
 	}
 
 	if wallpaper, ok := config.Custom[wallpaperKey].(string); ok {
-		fullPath := ExpandPath(wallpaper)
+		fullPath, err := ExpandPath(wallpaper)
+		if err != nil {
+			return err
+		}
 
 		if _, err := os.Stat(fullPath); err != nil {
 			fmt.Printf("    Warning: wallpaper file not found: %s\n", fullPath)

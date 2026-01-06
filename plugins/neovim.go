@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 )
 
-// Neovim writes theme configuration file.
 func Neovim(config PluginConfig) error {
 	mode := "dark"
 	colorscheme := config.Dark
@@ -17,7 +16,12 @@ func Neovim(config PluginConfig) error {
 		colorscheme = config.Light
 	}
 
-	themePath := filepath.Join(os.Getenv("HOME"), ".config/nvim/theme.lua")
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
+
+	themePath := filepath.Join(home, ".config/nvim/theme.lua")
 
 	var content string
 	if colorscheme != "" {
@@ -47,7 +51,6 @@ vim.o.background = "%s"
 	return nil
 }
 
-// notifyNeovim attempts to notify running Neovim instances (best effort).
 func notifyNeovim(themePath string) {
 	// Try nvr (neovim-remote) first
 	cmd := exec.Command("nvr", "--remote-expr", fmt.Sprintf("luafile %s", themePath))
