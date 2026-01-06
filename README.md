@@ -16,6 +16,17 @@ go install github.com/brittonhayes/day-night-cycle@latest
 
 Or download a binary from the [releases page](https://github.com/brittonhayes/day-night-cycle/releases).
 
+## Uninstall
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/brittonhayes/day-night-cycle/main/install.sh | bash -s -- --uninstall
+```
+
+This will:
+- Unload the launchd agent
+- Remove `~/.config/day-night-cycle/`
+- Remove `~/Library/LaunchAgents/com.daynightcycle.schedule.plist`
+
 ## Configure
 
 Edit `~/.config/day-night-cycle/config.yaml`:
