@@ -4,7 +4,12 @@ VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev
 BINARY_NAME = day-night-cycle
 INSTALL_PATH = /usr/local/bin
 BIN_DIR = bin
-LDFLAGS = -ldflags "-X main.Version=$(VERSION)"
+# Aggressive size optimization flags:
+# -s: strip symbol table
+# -w: strip DWARF debugging information
+# -X: set version variable
+LDFLAGS = -ldflags "-s -w -X main.Version=$(VERSION)"
+BUILD_FLAGS = -trimpath
 
 # Default target
 all: build
@@ -13,21 +18,21 @@ all: build
 build:
 	@echo "Building $(BINARY_NAME) $(VERSION)..."
 	@mkdir -p $(BIN_DIR)
-	go build $(LDFLAGS) -o $(BIN_DIR)/$(BINARY_NAME) ./cmd/day-night-cycle
+	CGO_ENABLED=0 go build $(BUILD_FLAGS) $(LDFLAGS) -o $(BIN_DIR)/$(BINARY_NAME) ./cmd/day-night-cycle
 	@echo "Built: $(BIN_DIR)/$(BINARY_NAME)"
 
 ## build-darwin-amd64: Build for macOS Intel (amd64)
 build-darwin-amd64:
 	@echo "Building $(BINARY_NAME)-darwin-amd64 $(VERSION)..."
 	@mkdir -p $(BIN_DIR)
-	GOOS=darwin GOARCH=amd64 go build $(LDFLAGS) -o $(BIN_DIR)/$(BINARY_NAME)-darwin-amd64 ./cmd/day-night-cycle
+	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build $(BUILD_FLAGS) $(LDFLAGS) -o $(BIN_DIR)/$(BINARY_NAME)-darwin-amd64 ./cmd/day-night-cycle
 	@echo "Built: $(BIN_DIR)/$(BINARY_NAME)-darwin-amd64"
 
 ## build-darwin-arm64: Build for macOS Apple Silicon (arm64)
 build-darwin-arm64:
 	@echo "Building $(BINARY_NAME)-darwin-arm64 $(VERSION)..."
 	@mkdir -p $(BIN_DIR)
-	GOOS=darwin GOARCH=arm64 go build $(LDFLAGS) -o $(BIN_DIR)/$(BINARY_NAME)-darwin-arm64 ./cmd/day-night-cycle
+	CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build $(BUILD_FLAGS) $(LDFLAGS) -o $(BIN_DIR)/$(BINARY_NAME)-darwin-arm64 ./cmd/day-night-cycle
 	@echo "Built: $(BIN_DIR)/$(BINARY_NAME)-darwin-arm64"
 
 ## build-all: Build for all supported platforms
