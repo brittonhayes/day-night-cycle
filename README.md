@@ -34,8 +34,8 @@ plugins:
 
   - name: cursor
     enabled: true
-    light_theme: "GitHub Light"
-    dark_theme: "Dark Modern"
+    light_theme: "Light Modern"
+    dark_theme: "Cursor Dark"
 
   - name: claude-code
     enabled: true
@@ -63,5 +63,7 @@ day-night-cycle schedule  # generate launchd schedule
 ## Build
 
 ```bash
-make build
+git tag vx.x.x
+make build-all
+make release
 ```

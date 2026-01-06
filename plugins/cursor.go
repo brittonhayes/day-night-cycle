@@ -6,16 +6,17 @@ import (
 )
 
 // Cursor updates Cursor settings.json.
-func Cursor(cfg map[string]interface{}, isLight bool) error {
-	themeKey := "dark_theme"
+func Cursor(config PluginConfig) error {
+	theme := config.Dark
 	defaultTheme := "Default Dark+"
-	if isLight {
-		themeKey = "light_theme"
+
+	if config.IsLight {
+		theme = config.Light
 		defaultTheme = "Default Light+"
 	}
 
-	theme, ok := cfg[themeKey].(string)
-	if !ok {
+	// Use default if theme not configured
+	if theme == "" {
 		theme = defaultTheme
 	}
 

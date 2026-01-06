@@ -127,7 +127,8 @@ func applyMode(cfg internal.Config, isLight bool) {
 		}
 
 		total++
-		err := pluginFunc(pluginCfg.Config, isLight)
+		config := plugins.NewPluginConfig(pluginCfg.Config, isLight)
+		err := pluginFunc(config)
 		if err != nil {
 			fmt.Printf("  ✗ %s: %v\n", pluginCfg.Name, err)
 		} else {

@@ -7,9 +7,9 @@ import (
 )
 
 // MacOSSystem sets system-wide appearance.
-func MacOSSystem(cfg map[string]interface{}, isLight bool) error {
+func MacOSSystem(config PluginConfig) error {
 	darkMode := "true"
-	if isLight {
+	if config.IsLight {
 		darkMode = "false"
 	}
 
@@ -28,11 +28,11 @@ end tell
 
 	// Optional wallpaper support
 	wallpaperKey := "dark_wallpaper"
-	if isLight {
+	if config.IsLight {
 		wallpaperKey = "light_wallpaper"
 	}
 
-	if wallpaper, ok := cfg[wallpaperKey].(string); ok {
+	if wallpaper, ok := config.Custom[wallpaperKey].(string); ok {
 		fullPath := ExpandPath(wallpaper)
 
 		if _, err := os.Stat(fullPath); err != nil {

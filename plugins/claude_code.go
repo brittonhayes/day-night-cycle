@@ -6,9 +6,9 @@ import (
 )
 
 // ClaudeCode updates Claude Code settings.json.
-func ClaudeCode(cfg map[string]interface{}, isLight bool) error {
+func ClaudeCode(config PluginConfig) error {
 	theme := "dark"
-	if isLight {
+	if config.IsLight {
 		theme = "light"
 	}
 

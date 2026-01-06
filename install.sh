@@ -114,8 +114,8 @@ plugins:
 
   - name: cursor
     enabled: true
-    light_theme: "GitHub Light"
-    dark_theme: "Dark Modern"
+    light_theme: "Light Modern"
+    dark_theme: "Cursor Dark"
 
   - name: neovim
     enabled: true

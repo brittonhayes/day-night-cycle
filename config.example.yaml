@@ -12,24 +12,47 @@ location:
 
 # Plugin configuration
 # Enable/disable plugins as needed
+#
+# Each plugin receives:
+#   - Light/Dark values: Extracted from light_* and dark_* keys
+#   - Custom config: All other plugin-specific settings
+#
+# Common patterns for light/dark values:
+#   - light_theme / dark_theme
+#   - light_preset / dark_preset
+#   - light_colorscheme / dark_colorscheme
+#   - light / dark
 plugins:
   # iTerm2 color preset switcher
   - name: iterm2
     enabled: true
     light_preset: "Light Background"  # Your light preset name
-    dark_preset: "Dark Background"  # Your dark preset name
+    dark_preset: "Dark Background"    # Your dark preset name
 
   # Claude Code theme switcher
   - name: claude-code
     enabled: true
+    # Uses system light/dark values (no config needed)
 
   # Cursor/VS Code theme switcher
   - name: cursor
     enabled: true
-    light_theme: "GitHub Light"  # Your preferred light theme name
-    dark_theme: "Dark Modern"     # Your preferred dark theme name
+    light_theme: "Light Modern"  # Your preferred light theme name
+    dark_theme: "Cursor Dark"    # Your preferred dark theme name
+
+  # Neovim colorscheme switcher
+  - name: neovim
+    enabled: false
+    light_colorscheme: "dayfox"   # Optional: specific light colorscheme
+    dark_colorscheme: "nightfox"  # Optional: specific dark colorscheme
+
+  # macOS system appearance
+  - name: macos-system
+    enabled: false
+    light_wallpaper: "~/Pictures/light-wallpaper.jpg"  # Optional
+    dark_wallpaper: "~/Pictures/dark-wallpaper.jpg"    # Optional
 
 # To add a new plugin:
-# 1. Add a new plugin function to plugins.go
-# 2. Register it in the plugins map
+# 1. Create a new plugin function in plugins/
+# 2. Register it in plugins/plugin.go
 # 3. Add configuration here
