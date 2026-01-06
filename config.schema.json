@@ -1,0 +1,93 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/brittonhayes/day-night-cycle/main/config.schema.json",
+  "title": "Day Night Cycle Configuration",
+  "description": "Configuration schema for day-night-cycle automatic theme switcher",
+  "type": "object",
+  "required": ["location", "plugins"],
+  "properties": {
+    "location": {
+      "type": "object",
+      "description": "Geographic location for sunrise/sunset calculations",
+      "required": ["latitude", "longitude", "timezone"],
+      "properties": {
+        "latitude": {
+          "type": "number",
+          "description": "Latitude in decimal degrees",
+          "minimum": -90,
+          "maximum": 90
+        },
+        "longitude": {
+          "type": "number",
+          "description": "Longitude in decimal degrees",
+          "minimum": -180,
+          "maximum": 180
+        },
+        "timezone": {
+          "type": "string",
+          "description": "IANA timezone identifier (e.g., 'America/Los_Angeles')",
+          "examples": [
+            "America/Los_Angeles",
+            "America/New_York",
+            "Europe/London",
+            "Asia/Tokyo"
+          ]
+        }
+      }
+    },
+    "plugins": {
+      "type": "array",
+      "description": "List of application plugins to manage",
+      "items": {
+        "type": "object",
+        "required": ["name", "enabled"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Plugin identifier",
+            "enum": [
+              "iterm2",
+              "cursor",
+              "claude-code",
+              "neovim",
+              "macos-system",
+              "sublime",
+              "pycharm"
+            ]
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Whether this plugin is active"
+          },
+          "day": {
+            "type": "string",
+            "description": "Theme/preset/colorscheme name for day mode"
+          },
+          "night": {
+            "type": "string",
+            "description": "Theme/preset/colorscheme name for night mode"
+          },
+          "custom": {
+            "type": "object",
+            "description": "Mode-specific arbitrary settings (for JSON-based config plugins)",
+            "properties": {
+              "day": {
+                "type": "object",
+                "description": "Settings to apply during day mode",
+                "additionalProperties": true
+              },
+              "night": {
+                "type": "object",
+                "description": "Settings to apply during night mode",
+                "additionalProperties": true
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}
