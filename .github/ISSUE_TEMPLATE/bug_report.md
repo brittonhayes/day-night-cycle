@@ -27,7 +27,7 @@ assignees: ''
 ## Environment
 
 - **OS:** <!-- e.g., macOS 14.0, Ubuntu 22.04 -->
-- **Python Version:** <!-- e.g., 3.11.5 -->
+- **Architecture:** <!-- e.g., arm64, amd64 -->
 - **day-night-cycle Version:** <!-- e.g., 1.0.0 or commit hash -->
 - **Affected Apps:** <!-- e.g., iTerm2, Cursor -->
 

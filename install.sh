@@ -1,82 +1,83 @@
 #!/bin/bash
-# Standalone installation script for day-night-cycle
-# Can be run directly via: curl -fsSL https://raw.githubusercontent.com/brittonhayes/day-night-cycle/main/install.sh | bash
-
 set -e
 
+echo "=========================================="
+echo "day-night-cycle installation (Go version)"
+echo "=========================================="
+echo ""
+
 INSTALL_DIR="$HOME/.config/day-night-cycle"
-REPO_URL="https://github.com/brittonhayes/day-night-cycle.git"
-LAUNCHD_DIR="$HOME/Library/LaunchAgents"
+BINARY_NAME="day-night-cycle"
+REPO="brittonhayes/day-night-cycle"
+ARCH=$(uname -m)
 
-echo "=========================================="
-echo "day-night-cycle installation"
-echo "=========================================="
-echo ""
-
-# Check for required commands
-if ! command -v python3 &>/dev/null; then
-  echo "Error: Python 3 is required but not found"
-  echo "Install Python 3 from https://www.python.org/downloads/"
-  exit 1
-fi
-
-if ! command -v git &>/dev/null; then
-  echo "Error: git is required but not found"
-  echo "Install git from https://git-scm.com/downloads"
-  exit 1
-fi
-
-PYTHON_PATH=$(which python3)
-echo "Found Python: $PYTHON_PATH"
-echo ""
-
-# Clone or update repository
-if [ -d "$INSTALL_DIR" ]; then
-  echo "Updating existing installation at $INSTALL_DIR..."
-  cd "$INSTALL_DIR"
-  git pull --quiet
+# Detect architecture
+if [ "$ARCH" = "arm64" ]; then
+    BINARY_SUFFIX="darwin-arm64"
+    echo "Detected: Apple Silicon (arm64)"
+elif [ "$ARCH" = "x86_64" ]; then
+    BINARY_SUFFIX="darwin-amd64"
+    echo "Detected: Intel (amd64)"
 else
-  echo "Cloning repository to $INSTALL_DIR..."
-  git clone --quiet "$REPO_URL" "$INSTALL_DIR"
-  cd "$INSTALL_DIR"
+    echo "Error: Unsupported architecture: $ARCH"
+    exit 1
 fi
 
-echo "Installing Python dependencies..."
-pip3 install -r requirements.txt --quiet --user
+# Get latest release version
+echo "Fetching latest release..."
+LATEST_VERSION=$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/')
 
-# Create logs directory
-mkdir -p "$INSTALL_DIR/logs"
+if [ -z "$LATEST_VERSION" ]; then
+    echo "Error: Could not determine latest version"
+    echo "You can manually download from: https://github.com/$REPO/releases"
+    exit 1
+fi
+
+echo "Latest version: $LATEST_VERSION"
+echo ""
+
+# Build download URL
+BINARY_URL="https://github.com/$REPO/releases/download/${LATEST_VERSION}/${BINARY_NAME}-${BINARY_SUFFIX}"
+
+# Create config directory
+mkdir -p "$INSTALL_DIR"
+
+# Download binary
+echo "Downloading $BINARY_NAME..."
+if ! curl -fsSL "$BINARY_URL" -o "$INSTALL_DIR/$BINARY_NAME"; then
+    echo "Error: Failed to download binary from $BINARY_URL"
+    echo "Please check that the release exists at: https://github.com/$REPO/releases"
+    exit 1
+fi
+
+chmod +x "$INSTALL_DIR/$BINARY_NAME"
+echo "Downloaded to: $INSTALL_DIR/$BINARY_NAME"
+echo ""
 
 # Interactive configuration
-echo ""
-echo "=========================================="
-echo "Configuration"
-echo "=========================================="
-echo ""
-
 if [ -f "$INSTALL_DIR/config.yaml" ]; then
-  echo "Found existing config.yaml"
-  read -p "Do you want to reconfigure? (y/N): " reconfigure
-  if [[ ! $reconfigure =~ ^[Yy]$ ]]; then
-    echo "Using existing configuration"
-  else
-    rm "$INSTALL_DIR/config.yaml"
-  fi
+    echo "Found existing config.yaml"
+    read -p "Do you want to reconfigure? (y/N): " reconfigure
+    if [[ ! $reconfigure =~ ^[Yy]$ ]]; then
+        echo "Using existing configuration"
+        SKIP_CONFIG=1
+    fi
 fi
 
-if [ ! -f "$INSTALL_DIR/config.yaml" ]; then
-  echo "Setting up your location..."
-  echo ""
-  echo "Find your coordinates: https://www.latlong.net/"
-  echo "Find your timezone: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones"
-  echo ""
+if [ -z "$SKIP_CONFIG" ]; then
+    echo "==========================================="
+    echo "Configuration"
+    echo "==========================================="
+    echo ""
+    echo "Find your coordinates: https://www.latlong.net/"
+    echo "Find your timezone: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones"
+    echo ""
 
-  read -p "Enter your latitude (e.g., 46.0645): " latitude
-  read -p "Enter your longitude (e.g., -118.3430): " longitude
-  read -p "Enter your timezone (e.g., America/Los_Angeles): " timezone
+    read -p "Enter your latitude (e.g., 46.0645): " latitude
+    read -p "Enter your longitude (e.g., -118.3430): " longitude
+    read -p "Enter your timezone (e.g., America/Los_Angeles): " timezone
 
-  # Create config from template
-  cat >"$INSTALL_DIR/config.yaml" <<EOF
+    cat > "$INSTALL_DIR/config.yaml" <<EOF
 location:
   name: "User Location"
   latitude: $latitude
@@ -104,94 +105,42 @@ plugins:
     enabled: false
 EOF
 
-  echo ""
-  echo "Configuration saved to $INSTALL_DIR/config.yaml"
-  echo "You can edit this file later to customize plugin settings"
+    echo ""
+    echo "Configuration saved to $INSTALL_DIR/config.yaml"
+    echo "You can edit this file later to customize plugin settings"
 fi
 
-# Create launchd directory if needed
-mkdir -p "$LAUNCHD_DIR"
-
-# Create updater plist (runs daily at 12:05 AM)
-UPDATER_PLIST="$LAUNCHD_DIR/com.daynightcycle.updater.plist"
-cat >"$UPDATER_PLIST" <<EOF
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>Label</key>
-    <string>com.daynightcycle.updater</string>
-    <key>ProgramArguments</key>
-    <array>
-        <string>$PYTHON_PATH</string>
-        <string>$INSTALL_DIR/scripts/update_schedule.py</string>
-    </array>
-    <key>WorkingDirectory</key>
-    <string>$INSTALL_DIR</string>
-    <key>StartCalendarInterval</key>
-    <dict>
-        <key>Hour</key>
-        <integer>0</integer>
-        <key>Minute</key>
-        <integer>5</integer>
-    </dict>
-    <key>StandardOutPath</key>
-    <string>$INSTALL_DIR/logs/updater.log</string>
-    <key>StandardErrorPath</key>
-    <string>$INSTALL_DIR/logs/updater.error.log</string>
-</dict>
-</plist>
-EOF
-
-# Calculate today's sunrise/sunset and create schedule
+# Generate launchd schedule
 echo ""
-echo "Calculating today's sunrise and sunset times..."
-python3 "$INSTALL_DIR/scripts/update_schedule.py"
+echo "Generating launchd schedule..."
+"$INSTALL_DIR/$BINARY_NAME" --config "$INSTALL_DIR/config.yaml" schedule
 
-# Load launchd agents
+# Load launchd agent
+PLIST_PATH="$HOME/Library/LaunchAgents/com.daynightcycle.schedule.plist"
 echo ""
-echo "Configuring automatic schedule..."
-
-# Unload existing agents (ignore errors)
-launchctl unload "$UPDATER_PLIST" 2>/dev/null || true
-launchctl unload "$LAUNCHD_DIR/com.daynightcycle.sunrise.plist" 2>/dev/null || true
-launchctl unload "$LAUNCHD_DIR/com.daynightcycle.sunset.plist" 2>/dev/null || true
-
-# Load agents
-launchctl load "$UPDATER_PLIST"
-launchctl load "$LAUNCHD_DIR/com.daynightcycle.sunrise.plist"
-launchctl load "$LAUNCHD_DIR/com.daynightcycle.sunset.plist"
-
-# Add convenience alias suggestion
-SHELL_CONFIG=""
-if [ -n "$ZSH_VERSION" ]; then
-  SHELL_CONFIG="$HOME/.zshrc"
-elif [ -n "$BASH_VERSION" ]; then
-  SHELL_CONFIG="$HOME/.bashrc"
-fi
+echo "Loading launchd agent..."
+launchctl unload "$PLIST_PATH" 2>/dev/null || true
+launchctl load "$PLIST_PATH"
 
 echo ""
-echo "=========================================="
+echo "==========================================="
 echo "Installation complete!"
-echo "=========================================="
+echo "==========================================="
 echo ""
-echo "Themes will automatically switch at sunrise and sunset."
+echo "Commands:"
+echo "  $INSTALL_DIR/$BINARY_NAME auto    # Apply based on current time"
+echo "  $INSTALL_DIR/$BINARY_NAME light   # Force light mode"
+echo "  $INSTALL_DIR/$BINARY_NAME dark    # Force dark mode"
+echo "  $INSTALL_DIR/$BINARY_NAME status  # Show status"
+echo "  $INSTALL_DIR/$BINARY_NAME next    # Show next transition"
 echo ""
-echo "Manual commands:"
-echo "  python3 -m day_night_cycle auto     # Apply mode based on time"
-echo "  python3 -m day_night_cycle light    # Force light mode"
-echo "  python3 -m day_night_cycle dark     # Force dark mode"
-echo "  python3 -m day_night_cycle status   # Show status"
+echo "Optional: Add an alias to your shell config (~/.zshrc or ~/.bashrc):"
+echo "  alias dnc='$INSTALL_DIR/$BINARY_NAME --config $INSTALL_DIR/config.yaml'"
 echo ""
-echo "Configuration: $INSTALL_DIR/config.yaml"
+echo "Configuration file: $INSTALL_DIR/config.yaml"
 echo ""
-
-if [ -n "$SHELL_CONFIG" ]; then
-  echo "Optional: Add an alias to your $SHELL_CONFIG:"
-  echo "  alias dnc='cd $INSTALL_DIR && python3 -m day_night_cycle'"
-  echo ""
-fi
-
 echo "To uninstall:"
-echo "  bash $INSTALL_DIR/scripts/uninstall.sh"
+echo "  launchctl unload $PLIST_PATH"
+echo "  rm -rf $INSTALL_DIR"
+echo "  rm $PLIST_PATH"
 echo ""

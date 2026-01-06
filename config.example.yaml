@@ -16,7 +16,7 @@ plugins:
   # iTerm2 color preset switcher
   - name: iterm2
     enabled: true
-    light_preset: "Light Background"  # Your light preset name (run scripts/list_iterm_presets.py to see options)
+    light_preset: "Light Background"  # Your light preset name
     dark_preset: "Dark Background"  # Your dark preset name
 
   # Claude Code theme switcher
@@ -30,7 +30,6 @@ plugins:
     dark_theme: "Dark Modern"     # Your preferred dark theme name
 
 # To add a new plugin:
-# 1. Create a new file in day_night_cycle/plugins/
-# 2. Inherit from the Plugin base class
-# 3. Implement set_light_mode() and set_dark_mode()
-# 4. Add configuration here
+# 1. Add a new plugin function to plugins.go
+# 2. Register it in the plugins map
+# 3. Add configuration here

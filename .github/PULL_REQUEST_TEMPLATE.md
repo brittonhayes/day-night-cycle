@@ -30,7 +30,7 @@
 
 **Test environment:**
 - OS:
-- Python version:
+- Architecture:
 - Affected apps:
 
 ## Checklist

@@ -8,8 +8,8 @@ This skill automates the process of adding new application support to the day/ni
 
 1. Research how theme switching works for the target application
 2. Identify the appropriate implementation pattern
-3. Create a plugin file implementing the Plugin base class
-4. Update the plugin registry
+3. Create a plugin function in plugins.go
+4. Register the plugin in the plugins map
 5. Provide configuration examples and documentation
 
 ## Usage
@@ -40,11 +40,11 @@ The skill will automatically activate based on these types of requests.
 - Checks for AppleScript or CLI support
 
 ### Implementation Phase
-- Selects the appropriate plugin pattern (JSON, YAML, AppleScript, CLI, plist)
-- Creates a new plugin file in `day_night_cycle/plugins/`
-- Implements the required methods: `name`, `set_light_mode()`, `set_dark_mode()`
-- Adds proper error handling and validation
-- Updates `day_night_cycle/plugins/__init__.py` to register the plugin
+- Selects the appropriate plugin pattern (JSON, YAML, AppleScript, CLI, text file)
+- Creates a new plugin function in `plugins.go`
+- Implements theme switching logic for both light and dark modes
+- Adds proper error handling with descriptive error messages
+- Registers the plugin in the `plugins` map
 
 ### Documentation Phase
 - Provides configuration examples for `config.yaml`
@@ -66,16 +66,16 @@ The skill knows how to implement plugins for:
 2. **YAML configuration files** (CLI tools, development tools)
 3. **AppleScript control** (iTerm2, Terminal, native macOS apps)
 4. **Command-line interfaces** (CLI-first tools)
-5. **Property lists (plist)** (Native macOS applications)
+5. **Text file manipulation** (Vim, config files with includes)
 6. **Hybrid approaches** (apps with multiple control methods)
 
 ## Prerequisites
 
 The skill expects:
-- The base Plugin class at `day_night_cycle/plugins/base.py`
-- Plugin registry at `day_night_cycle/plugins/__init__.py`
+- The plugins map in `plugins.go`
 - Configuration file at `config.yaml` (or `config.example.yaml`)
 - Access to web search for research
+- Go toolchain for building and testing
 
 ## Examples
 
@@ -86,8 +86,8 @@ The skill expects:
 **Skill actions:**
 1. Searches for VS Code theme documentation
 2. Discovers settings.json location and workbench.colorTheme property
-3. Creates `day_night_cycle/plugins/vscode.py` using JSON pattern
-4. Updates plugin registry
+3. Creates `vscodePlugin` function in `plugins.go` using JSON pattern
+4. Registers plugin in plugins map
 5. Provides config with popular theme names
 
 ### Example 2: Adding Kitty Terminal
@@ -97,7 +97,7 @@ The skill expects:
 **Skill actions:**
 1. Researches Kitty configuration
 2. Finds it uses include-based theme system
-3. Creates plugin that updates kitty.conf
+3. Creates plugin function that updates kitty.conf
 4. Implements reload signal (SIGUSR1) for live updates
 5. Documents theme file requirements
 
@@ -114,14 +114,14 @@ The skill expects:
 The skill can be extended with:
 - Additional plugin patterns
 - Platform-specific implementations (Windows, Linux)
-- Integration with helper script generation
+- Integration with helper utilities
 - Automated testing setup
 
 ## Maintenance
 
 To update the skill:
 1. Edit the relevant `.md` files in `.claude/skills/add-plugin/`
-2. Keep patterns in sync with base Plugin class changes
+2. Keep patterns in sync with plugins.go structure changes
 3. Add new examples as more plugins are implemented
 4. Update research checklist based on common issues
 
@@ -134,6 +134,5 @@ To update the skill:
 
 ## Related Documentation
 
-- [PLUGINS.md](../../../PLUGINS.md) - Plugin development guide
-- [day_night_cycle/plugins/base.py](../../../day_night_cycle/plugins/base.py) - Base Plugin class
+- [plugins.go](../../../plugins.go) - All plugin implementations
 - [README.md](../../../README.md) - Project overview

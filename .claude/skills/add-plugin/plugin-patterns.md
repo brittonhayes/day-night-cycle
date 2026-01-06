@@ -10,114 +10,82 @@ This guide provides detailed patterns for implementing plugins based on how the 
 
 ### Template
 
-```python
-"""[App Name] plugin for day/night cycle automation."""
+```go
+func [appName]Plugin(cfg map[string]interface{}, isLight bool) error {
+    // Extract config values
+    lightTheme, _ := cfg["light_theme"].(string)
+    darkTheme, _ := cfg["dark_theme"].(string)
 
-import json
-import os
-from pathlib import Path
-from typing import Optional
-from .base import Plugin
+    // Set defaults if not provided
+    if lightTheme == "" {
+        lightTheme = "[Default Light Theme]"
+    }
+    if darkTheme == "" {
+        darkTheme = "[Default Dark Theme]"
+    }
 
+    // Determine target theme
+    targetTheme := darkTheme
+    if isLight {
+        targetTheme = lightTheme
+    }
 
-class [AppName]Plugin(Plugin):
-    """
-    Plugin to control [App Name] theme.
+    // Build settings path
+    home, err := os.UserHomeDir()
+    if err != nil {
+        return fmt.Errorf("failed to get home directory: %w", err)
+    }
+    settingsPath := filepath.Join(home, "Library", "Application Support", "[AppName]", "User", "settings.json")
 
-    [Add any special notes about how the app handles theme changes]
-    """
-
-    def __init__(self, config):
-        super().__init__(config)
-        # Determine settings path based on OS
-        self.settings_path = Path.home() / 'Library' / 'Application Support' / '[App Name]' / 'User' / 'settings.json'
-
-    @property
-    def name(self) -> str:
-        return "[app-name]"
-
-    def validate_config(self) -> tuple[bool, Optional[str]]:
-        """Validate settings file exists."""
-        if not self.settings_path.exists():
-            return False, f"[App Name] settings not found at {self.settings_path}"
-        return True, None
-
-    def _update_theme(self, theme: str) -> bool:
-        """
-        Update theme in settings.
-
-        Args:
-            theme: 'light' or 'dark'
-
-        Returns:
-            True if successful, False otherwise
-        """
-        # Get theme names from config or use defaults
-        theme_map = {
-            'light': self.config.get('light_theme', '[Default Light Theme]'),
-            'dark': self.config.get('dark_theme', '[Default Dark Theme]')
+    // Read current settings
+    var settings map[string]interface{}
+    data, err := os.ReadFile(settingsPath)
+    if err != nil {
+        if os.IsNotExist(err) {
+            settings = make(map[string]interface{})
+        } else {
+            return fmt.Errorf("failed to read settings: %w", err)
         }
+    } else {
+        if err := json.Unmarshal(data, &settings); err != nil {
+            return fmt.Errorf("failed to parse settings: %w", err)
+        }
+    }
 
-        try:
-            # Read current settings
-            if self.settings_path.exists():
-                with open(self.settings_path, 'r') as f:
-                    settings = json.load(f)
-            else:
-                settings = {}
+    // Check if already set
+    if currentTheme, ok := settings["[theme_property_name]"].(string); ok && currentTheme == targetTheme {
+        return nil // Already set, nothing to do
+    }
 
-            target_theme = theme_map[theme]
-            current_theme = settings.get('[theme_property_name]')
+    // Update theme
+    settings["[theme_property_name]"] = targetTheme
 
-            # Skip if already set to avoid unnecessary writes
-            if current_theme == target_theme:
-                return True
+    // Marshal and write
+    updatedData, err := json.MarshalIndent(settings, "", "  ")
+    if err != nil {
+        return fmt.Errorf("failed to marshal settings: %w", err)
+    }
 
-            # Update theme property
-            settings['[theme_property_name]'] = target_theme
+    // Ensure directory exists
+    if err := os.MkdirAll(filepath.Dir(settingsPath), 0755); err != nil {
+        return fmt.Errorf("failed to create directory: %w", err)
+    }
 
-            # Ensure directory exists
-            self.settings_path.parent.mkdir(parents=True, exist_ok=True)
+    // Write file
+    if err := os.WriteFile(settingsPath, updatedData, 0644); err != nil {
+        return fmt.Errorf("failed to write settings: %w", err)
+    }
 
-            # Write back with explicit flush
-            with open(self.settings_path, 'w') as f:
-                json.dump(settings, f, indent=2)
-                f.flush()
-                os.fsync(f.fileno())
-
-            # Verify the write
-            with open(self.settings_path, 'r') as f:
-                verify_settings = json.load(f)
-                if verify_settings.get('[theme_property_name]') != target_theme:
-                    print(f"    Warning: Theme not properly saved")
-                    return False
-
-            return True
-        except FileNotFoundError:
-            print(f"    Error: Settings file not found at {self.settings_path}")
-            return False
-        except json.JSONDecodeError as e:
-            print(f"    Error: Invalid JSON in settings file: {e}")
-            return False
-        except Exception as e:
-            print(f"    Error: {e}")
-            return False
-
-    def set_light_mode(self) -> bool:
-        """Set [App Name] to light theme."""
-        return self._update_theme('light')
-
-    def set_dark_mode(self) -> bool:
-        """Set [App Name] to dark theme."""
-        return self._update_theme('dark')
+    return nil
+}
 ```
 
 ### Key considerations:
-- Check if file exists before reading
-- Handle malformed JSON gracefully
-- Use `os.fsync()` to ensure write completes
-- Verify the write succeeded
+- Use `os.IsNotExist()` to check for missing files
+- Handle JSON unmarshal errors gracefully
 - Skip writes if already in target mode
+- Use `MarshalIndent` for readable output
+- Ensure parent directories exist before writing
 
 ## Pattern 2: YAML Configuration Files
 
@@ -127,73 +95,64 @@ class [AppName]Plugin(Plugin):
 
 ### Template
 
-```python
-"""[App Name] plugin for day/night cycle automation."""
+```go
+func [appName]Plugin(cfg map[string]interface{}, isLight bool) error {
+    lightTheme, _ := cfg["light_theme"].(string)
+    darkTheme, _ := cfg["dark_theme"].(string)
 
-import yaml
-from pathlib import Path
-from typing import Optional
-from .base import Plugin
+    if lightTheme == "" {
+        lightTheme = "[default-light]"
+    }
+    if darkTheme == "" {
+        darkTheme = "[default-dark]"
+    }
 
+    targetTheme := darkTheme
+    if isLight {
+        targetTheme = lightTheme
+    }
 
-class [AppName]Plugin(Plugin):
-    """Plugin to control [App Name] theme."""
+    home, err := os.UserHomeDir()
+    if err != nil {
+        return fmt.Errorf("failed to get home directory: %w", err)
+    }
+    configPath := filepath.Join(home, ".[app-name]", "config.yml")
 
-    def __init__(self, config):
-        super().__init__(config)
-        self.config_path = Path.home() / '.[app-name]' / 'config.yml'
-
-    @property
-    def name(self) -> str:
-        return "[app-name]"
-
-    def validate_config(self) -> tuple[bool, Optional[str]]:
-        """Validate config file exists."""
-        if not self.config_path.exists():
-            return False, f"[App Name] config not found at {self.config_path}"
-        return True, None
-
-    def _update_theme(self, theme: str) -> bool:
-        """Update theme in config."""
-        theme_map = {
-            'light': self.config.get('light_theme', '[default-light]'),
-            'dark': self.config.get('dark_theme', '[default-dark]')
+    // Read current config
+    var config map[string]interface{}
+    data, err := os.ReadFile(configPath)
+    if err != nil {
+        if os.IsNotExist(err) {
+            config = make(map[string]interface{})
+        } else {
+            return fmt.Errorf("failed to read config: %w", err)
         }
+    } else {
+        if err := yaml.Unmarshal(data, &config); err != nil {
+            return fmt.Errorf("failed to parse YAML: %w", err)
+        }
+    }
 
-        try:
-            # Read current config
-            with open(self.config_path, 'r') as f:
-                config = yaml.safe_load(f) or {}
+    // Check if already set
+    if currentTheme, ok := config["theme"].(string); ok && currentTheme == targetTheme {
+        return nil
+    }
 
-            # Update theme
-            target_theme = theme_map[theme]
-            if config.get('theme') == target_theme:
-                return True
+    // Update theme
+    config["theme"] = targetTheme
 
-            config['theme'] = target_theme
+    // Marshal and write
+    updatedData, err := yaml.Marshal(config)
+    if err != nil {
+        return fmt.Errorf("failed to marshal YAML: %w", err)
+    }
 
-            # Write back
-            with open(self.config_path, 'w') as f:
-                yaml.dump(config, f, default_flow_style=False)
+    if err := os.WriteFile(configPath, updatedData, 0644); err != nil {
+        return fmt.Errorf("failed to write config: %w", err)
+    }
 
-            return True
-        except FileNotFoundError:
-            print(f"    Error: Config file not found at {self.config_path}")
-            return False
-        except yaml.YAMLError as e:
-            print(f"    Error: Invalid YAML: {e}")
-            return False
-        except Exception as e:
-            print(f"    Error: {e}")
-            return False
-
-    def set_light_mode(self) -> bool:
-        """Set [App Name] to light theme."""
-        return self._update_theme('light')
-
-    def set_dark_mode(self) -> bool:
-        """Set [App Name] to dark theme."""
-        return self._update_theme('dark')
+    return nil
+}
 ```
 
 ## Pattern 3: AppleScript Control (macOS)
@@ -204,81 +163,47 @@ class [AppName]Plugin(Plugin):
 
 ### Template
 
-```python
-"""[App Name] plugin for day/night cycle automation."""
+```go
+func [appName]Plugin(cfg map[string]interface{}, isLight bool) error {
+    lightPreset, _ := cfg["light_preset"].(string)
+    darkPreset, _ := cfg["dark_preset"].(string)
 
-import subprocess
-from typing import Optional
-from .base import Plugin
+    if lightPreset == "" {
+        lightPreset = "[Default Light]"
+    }
+    if darkPreset == "" {
+        darkPreset = "[Default Dark]"
+    }
 
+    preset := darkPreset
+    if isLight {
+        preset = lightPreset
+    }
 
-class [AppName]Plugin(Plugin):
-    """Plugin to control [App Name] via AppleScript."""
-
-    @property
-    def name(self) -> str:
-        return "[app-name]"
-
-    def _run_applescript(self, script: str) -> bool:
-        """
-        Execute AppleScript and return success status.
-
-        Args:
-            script: AppleScript code to execute
-
-        Returns:
-            True if successful, False otherwise
-        """
-        try:
-            result = subprocess.run(
-                ['osascript', '-e', script],
-                check=True,
-                capture_output=True,
-                text=True,
-                timeout=5
-            )
-            return True
-        except subprocess.TimeoutExpired:
-            print(f"    Error: AppleScript execution timed out")
-            return False
-        except subprocess.CalledProcessError as e:
-            print(f"    Error: AppleScript failed: {e.stderr}")
-            return False
-        except FileNotFoundError:
-            print(f"    Error: osascript not found (not on macOS?)")
-            return False
-        except Exception as e:
-            print(f"    Error: {e}")
-            return False
-
-    def set_light_mode(self) -> bool:
-        """Set [App Name] to light theme."""
-        light_preset = self.config.get('light_preset', '[Default Light]')
-        script = f'''
+    script := fmt.Sprintf(`
         tell application "[App Name]"
-            -- AppleScript commands to set light theme
-            -- Example: set current theme to "{light_preset}"
+            -- AppleScript commands to set theme
+            -- Example: set current theme to "%s"
         end tell
-        '''
-        return self._run_applescript(script)
+    `, preset)
 
-    def set_dark_mode(self) -> bool:
-        """Set [App Name] to dark theme."""
-        dark_preset = self.config.get('dark_preset', '[Default Dark]')
-        script = f'''
-        tell application "[App Name]"
-            -- AppleScript commands to set dark theme
-            -- Example: set current theme to "{dark_preset}"
-        end tell
-        '''
-        return self._run_applescript(script)
+    ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+    defer cancel()
+
+    cmd := exec.CommandContext(ctx, "osascript", "-e", script)
+    if output, err := cmd.CombinedOutput(); err != nil {
+        return fmt.Errorf("AppleScript failed: %w: %s", err, string(output))
+    }
+
+    return nil
+}
 ```
 
 ### Key considerations:
-- Set timeout to prevent hanging
+- Use context with timeout to prevent hanging
 - Capture stderr for error messages
 - Handle case where osascript isn't available
-- Check if application is running first (optional)
+- Some apps require them to be running
 
 ## Pattern 4: Command-Line Interface
 
@@ -288,190 +213,118 @@ class [AppName]Plugin(Plugin):
 
 ### Template
 
-```python
-"""[App Name] plugin for day/night cycle automation."""
+```go
+func [appName]Plugin(cfg map[string]interface{}, isLight bool) error {
+    lightTheme, _ := cfg["light_theme"].(string)
+    darkTheme, _ := cfg["dark_theme"].(string)
 
-import subprocess
-from typing import Optional
-from .base import Plugin
+    if lightTheme == "" {
+        lightTheme = "[default-light]"
+    }
+    if darkTheme == "" {
+        darkTheme = "[default-dark]"
+    }
 
+    theme := darkTheme
+    if isLight {
+        theme = lightTheme
+    }
 
-class [AppName]Plugin(Plugin):
-    """Plugin to control [App Name] via CLI."""
+    ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+    defer cancel()
 
-    @property
-    def name(self) -> str:
-        return "[app-name]"
+    cmd := exec.CommandContext(ctx, "[command-name]", "theme", "set", theme)
+    if output, err := cmd.CombinedOutput(); err != nil {
+        return fmt.Errorf("command failed: %w: %s", err, string(output))
+    }
 
-    def validate_config(self) -> tuple[bool, Optional[str]]:
-        """Validate that the CLI tool is available."""
-        try:
-            result = subprocess.run(
-                ['[command-name]', '--version'],
-                capture_output=True,
-                timeout=5
-            )
-            if result.returncode != 0:
-                return False, "[App Name] CLI not found or not working"
-            return True, None
-        except FileNotFoundError:
-            return False, "[App Name] CLI not found in PATH"
-        except Exception as e:
-            return False, f"Error checking [App Name] CLI: {e}"
-
-    def _run_command(self, *args) -> bool:
-        """Execute CLI command."""
-        try:
-            result = subprocess.run(
-                ['[command-name]', *args],
-                check=True,
-                capture_output=True,
-                text=True,
-                timeout=10
-            )
-            return True
-        except subprocess.TimeoutExpired:
-            print(f"    Error: Command timed out")
-            return False
-        except subprocess.CalledProcessError as e:
-            print(f"    Error: Command failed: {e.stderr}")
-            return False
-        except FileNotFoundError:
-            print(f"    Error: [command-name] not found in PATH")
-            return False
-        except Exception as e:
-            print(f"    Error: {e}")
-            return False
-
-    def set_light_mode(self) -> bool:
-        """Set [App Name] to light theme."""
-        theme = self.config.get('light_theme', '[default-light]')
-        return self._run_command('theme', 'set', theme)
-
-    def set_dark_mode(self) -> bool:
-        """Set [App Name] to dark theme."""
-        theme = self.config.get('dark_theme', '[default-dark]')
-        return self._run_command('theme', 'set', theme)
+    return nil
+}
 ```
 
-## Pattern 5: Property List (plist) Files (macOS)
+## Pattern 5: Text File Manipulation
 
-**Use when:** macOS application stores preferences in plist format
-
-**Example applications:** Many native macOS applications
+**Use when:** Need to modify specific lines in config files (like .vimrc)
 
 ### Template
 
-```python
-"""[App Name] plugin for day/night cycle automation."""
+```go
+func [appName]Plugin(cfg map[string]interface{}, isLight bool) error {
+    lightSetting, _ := cfg["light_setting"].(string)
+    darkSetting, _ := cfg["dark_setting"].(string)
 
-import subprocess
-import plistlib
-from pathlib import Path
-from typing import Optional
-from .base import Plugin
+    setting := darkSetting
+    if isLight {
+        setting = lightSetting
+    }
 
+    home, err := os.UserHomeDir()
+    if err != nil {
+        return fmt.Errorf("failed to get home directory: %w", err)
+    }
+    configPath := filepath.Join(home, ".[app-config]")
 
-class [AppName]Plugin(Plugin):
-    """Plugin to control [App Name] via plist preferences."""
+    // Read file
+    data, err := os.ReadFile(configPath)
+    if err != nil && !os.IsNotExist(err) {
+        return fmt.Errorf("failed to read config: %w", err)
+    }
 
-    def __init__(self, config):
-        super().__init__(config)
-        self.plist_path = Path.home() / 'Library' / 'Preferences' / 'com.[vendor].[app].plist'
-        self.defaults_domain = 'com.[vendor].[app]'
+    lines := []string{}
+    if len(data) > 0 {
+        lines = strings.Split(string(data), "\n")
+    }
 
-    @property
-    def name(self) -> str:
-        return "[app-name]"
-
-    def validate_config(self) -> tuple[bool, Optional[str]]:
-        """Validate plist file exists."""
-        if not self.plist_path.exists():
-            return False, f"Preferences not found at {self.plist_path}"
-        return True, None
-
-    def _update_via_defaults(self, key: str, value: str) -> bool:
-        """Update preference using defaults command."""
-        try:
-            subprocess.run(
-                ['defaults', 'write', self.defaults_domain, key, value],
-                check=True,
-                capture_output=True,
-                timeout=5
-            )
-            return True
-        except Exception as e:
-            print(f"    Error: {e}")
-            return False
-
-    def _update_theme(self, theme: str) -> bool:
-        """Update theme preference."""
-        theme_map = {
-            'light': self.config.get('light_theme', '[LightTheme]'),
-            'dark': self.config.get('dark_theme', '[DarkTheme]')
+    // Remove old setting lines
+    newLines := []string{}
+    for _, line := range lines {
+        if !strings.HasPrefix(strings.TrimSpace(line), "[setting-prefix]") {
+            newLines = append(newLines, line)
         }
+    }
 
-        theme_value = theme_map[theme]
-        success = self._update_via_defaults('[ThemeKey]', theme_value)
+    // Add new setting
+    newLines = append(newLines, fmt.Sprintf("[setting-prefix] %s", setting))
 
-        if success:
-            # Optional: Notify app to reload preferences
-            # Some apps need this, others watch for changes automatically
-            pass
+    // Write back
+    content := strings.Join(newLines, "\n")
+    if err := os.WriteFile(configPath, []byte(content), 0644); err != nil {
+        return fmt.Errorf("failed to write config: %w", err)
+    }
 
-        return success
-
-    def set_light_mode(self) -> bool:
-        """Set [App Name] to light theme."""
-        return self._update_theme('light')
-
-    def set_dark_mode(self) -> bool:
-        """Set [App Name] to dark theme."""
-        return self._update_theme('dark')
+    return nil
+}
 ```
 
-## Pattern 6: Multiple Configuration Methods
-
-**Use when:** Application can be controlled via multiple methods (prefer most reliable)
-
-### Decision priority:
-1. **Native API** (if available and documented)
-2. **Configuration file** (most reliable, works when app isn't running)
-3. **AppleScript** (good for macOS, requires app to be running)
-4. **CLI** (if official CLI exists)
-5. **Environment variables** (for terminal apps)
-
-## Common Helper Methods
+## Common Helper Patterns
 
 ### Check if Application is Running
 
-```python
-def _is_app_running(self, app_name: str) -> bool:
-    """Check if application is currently running (macOS)."""
-    try:
-        result = subprocess.run(
-            ['pgrep', '-x', app_name],
-            capture_output=True
-        )
-        return result.returncode == 0
-    except:
-        return False
+```go
+func isAppRunning(appName string) bool {
+    cmd := exec.Command("pgrep", "-x", appName)
+    return cmd.Run() == nil
+}
 ```
 
-### Get Available Themes
+### Send Reload Signal (macOS/Linux)
 
-```python
-def get_available_themes(self) -> list[str]:
-    """
-    Get list of available themes.
-    Useful for creating helper scripts.
-    """
-    try:
-        # Implementation depends on how app exposes themes
-        pass
-    except Exception as e:
-        print(f"Error: {e}")
-        return []
+```go
+func reloadApp(appName string) error {
+    cmd := exec.Command("pgrep", appName)
+    output, err := cmd.Output()
+    if err != nil {
+        return nil // Not running, nothing to reload
+    }
+
+    pid := strings.TrimSpace(string(output))
+    if pid == "" {
+        return nil
+    }
+
+    cmd = exec.Command("kill", "-SIGUSR1", pid)
+    return cmd.Run()
+}
 ```
 
 ## Research Checklist
@@ -491,12 +344,12 @@ When researching a new application, find:
 
 After implementation:
 
-- [ ] Plugin imports without errors
-- [ ] `validate_config()` works correctly
+- [ ] Plugin function compiles without errors
+- [ ] Registered in plugins map
 - [ ] Light mode switches successfully
 - [ ] Dark mode switches successfully
 - [ ] Error messages are helpful
-- [ ] Returns correct boolean values
+- [ ] Returns proper error values
 - [ ] Handles missing files gracefully
 - [ ] Works when app is not running (if applicable)
 - [ ] Works when app is running (if applicable)

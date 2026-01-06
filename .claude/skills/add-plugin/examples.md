@@ -14,104 +14,80 @@ This document shows complete examples of adding plugins for common applications.
 
 ### Implementation:
 
-**File:** `day_night_cycle/plugins/vscode.py`
+Add to `plugins.go`:
 
-```python
-"""Visual Studio Code plugin for day/night cycle automation."""
+```go
+func vscodePlugin(cfg map[string]interface{}, isLight bool) error {
+    lightTheme, _ := cfg["light_theme"].(string)
+    darkTheme, _ := cfg["dark_theme"].(string)
 
-import json
-import os
-from pathlib import Path
-from typing import Optional
-from .base import Plugin
+    if lightTheme == "" {
+        lightTheme = "Light+ (default light)"
+    }
+    if darkTheme == "" {
+        darkTheme = "Dark+ (default dark)"
+    }
 
+    targetTheme := darkTheme
+    if isLight {
+        targetTheme = lightTheme
+    }
 
-class VSCodePlugin(Plugin):
-    """
-    Plugin to control VS Code theme.
+    home, err := os.UserHomeDir()
+    if err != nil {
+        return fmt.Errorf("failed to get home directory: %w", err)
+    }
+    settingsPath := filepath.Join(home, "Library", "Application Support", "Code", "User", "settings.json")
 
-    VS Code watches its settings.json and applies changes automatically.
-    """
-
-    def __init__(self, config):
-        super().__init__(config)
-        self.settings_path = Path.home() / 'Library' / 'Application Support' / 'Code' / 'User' / 'settings.json'
-
-    @property
-    def name(self) -> str:
-        return "vscode"
-
-    def validate_config(self) -> tuple[bool, Optional[str]]:
-        """Validate VS Code settings file exists."""
-        if not self.settings_path.exists():
-            return False, f"VS Code settings not found at {self.settings_path}"
-        return True, None
-
-    def _update_theme(self, theme: str) -> bool:
-        """Update VS Code theme in settings."""
-        theme_map = {
-            'light': self.config.get('light_theme', 'Light+ (default light)'),
-            'dark': self.config.get('dark_theme', 'Dark+ (default dark)')
+    var settings map[string]interface{}
+    data, err := os.ReadFile(settingsPath)
+    if err != nil {
+        if os.IsNotExist(err) {
+            settings = make(map[string]interface{})
+        } else {
+            return fmt.Errorf("failed to read settings: %w", err)
         }
+    } else {
+        if err := json.Unmarshal(data, &settings); err != nil {
+            return fmt.Errorf("failed to parse settings: %w", err)
+        }
+    }
 
-        try:
-            if self.settings_path.exists():
-                with open(self.settings_path, 'r') as f:
-                    settings = json.load(f)
-            else:
-                settings = {}
+    if currentTheme, ok := settings["workbench.colorTheme"].(string); ok && currentTheme == targetTheme {
+        return nil
+    }
 
-            target_theme = theme_map[theme]
-            current_theme = settings.get('workbench.colorTheme')
+    settings["workbench.colorTheme"] = targetTheme
 
-            if current_theme == target_theme:
-                return True
+    updatedData, err := json.MarshalIndent(settings, "", "  ")
+    if err != nil {
+        return fmt.Errorf("failed to marshal settings: %w", err)
+    }
 
-            settings['workbench.colorTheme'] = target_theme
+    if err := os.MkdirAll(filepath.Dir(settingsPath), 0755); err != nil {
+        return fmt.Errorf("failed to create directory: %w", err)
+    }
 
-            self.settings_path.parent.mkdir(parents=True, exist_ok=True)
+    if err := os.WriteFile(settingsPath, updatedData, 0644); err != nil {
+        return fmt.Errorf("failed to write settings: %w", err)
+    }
 
-            with open(self.settings_path, 'w') as f:
-                json.dump(settings, f, indent=2)
-                f.flush()
-                os.fsync(f.fileno())
-
-            with open(self.settings_path, 'r') as f:
-                verify_settings = json.load(f)
-                if verify_settings.get('workbench.colorTheme') != target_theme:
-                    print(f"    Warning: Theme not properly saved")
-                    return False
-
-            return True
-        except FileNotFoundError:
-            print(f"    Error: Settings file not found at {self.settings_path}")
-            return False
-        except json.JSONDecodeError as e:
-            print(f"    Error: Invalid JSON in settings file: {e}")
-            return False
-        except Exception as e:
-            print(f"    Error: {e}")
-            return False
-
-    def set_light_mode(self) -> bool:
-        """Set VS Code to light theme."""
-        return self._update_theme('light')
-
-    def set_dark_mode(self) -> bool:
-        """Set VS Code to dark theme."""
-        return self._update_theme('dark')
+    return nil
+}
 ```
 
-### Integration:
+### Register in plugins map:
 
-**Update:** `day_night_cycle/plugins/__init__.py`
-```python
-from . import vscode
+```go
+var plugins = map[string]PluginFunc{
+    // ... existing plugins
+    "vscode": vscodePlugin,
+}
 ```
 
 ### Configuration:
 
-**Add to:** `config.yaml`
+Add to `config.yaml`:
 ```yaml
 plugins:
   - name: vscode
@@ -122,8 +98,9 @@ plugins:
 
 ### Testing:
 ```bash
-python3 -m day_night_cycle light  # Should switch VS Code to light theme
-python3 -m day_night_cycle dark   # Should switch VS Code to dark theme
+make build
+./day-night-cycle light  # Should switch VS Code to light theme
+./day-night-cycle dark   # Should switch VS Code to dark theme
 ```
 
 ## Example 2: Kitty Terminal
@@ -138,91 +115,70 @@ python3 -m day_night_cycle dark   # Should switch VS Code to dark theme
 
 ### Implementation:
 
-**File:** `day_night_cycle/plugins/kitty.py`
+Add to `plugins.go`:
 
-```python
-"""Kitty terminal plugin for day/night cycle automation."""
+```go
+func kittyPlugin(cfg map[string]interface{}, isLight bool) error {
+    lightTheme, _ := cfg["light_theme"].(string)
+    darkTheme, _ := cfg["dark_theme"].(string)
 
-import subprocess
-from pathlib import Path
-from typing import Optional
-from .base import Plugin
+    if lightTheme == "" {
+        lightTheme = "light"
+    }
+    if darkTheme == "" {
+        darkTheme = "dark"
+    }
 
+    themeName := darkTheme
+    if isLight {
+        themeName = lightTheme
+    }
 
-class KittyPlugin(Plugin):
-    """Plugin to control Kitty terminal theme."""
+    home, err := os.UserHomeDir()
+    if err != nil {
+        return fmt.Errorf("failed to get home directory: %w", err)
+    }
+    configPath := filepath.Join(home, ".config", "kitty", "kitty.conf")
 
-    def __init__(self, config):
-        super().__init__(config)
-        self.config_path = Path.home() / '.config' / 'kitty' / 'kitty.conf'
-        self.light_theme = self.config.get('light_theme', 'light')
-        self.dark_theme = self.config.get('dark_theme', 'dark')
+    data, err := os.ReadFile(configPath)
+    if err != nil {
+        return fmt.Errorf("failed to read config: %w", err)
+    }
 
-    @property
-    def name(self) -> str:
-        return "kitty"
+    lines := strings.Split(string(data), "\n")
+    newLines := []string{}
 
-    def validate_config(self) -> tuple[bool, Optional[str]]:
-        """Validate Kitty config exists."""
-        if not self.config_path.exists():
-            return False, f"Kitty config not found at {self.config_path}"
-        return True, None
+    for _, line := range lines {
+        if !strings.HasPrefix(strings.TrimSpace(line), "include themes/") {
+            newLines = append(newLines, line)
+        }
+    }
 
-    def _update_theme(self, theme_name: str) -> bool:
-        """Update Kitty theme by modifying config."""
-        try:
-            # Read current config
-            with open(self.config_path, 'r') as f:
-                lines = f.readlines()
+    newLines = append(newLines, fmt.Sprintf("include themes/%s.conf", themeName))
 
-            # Remove old theme includes
-            new_lines = [
-                line for line in lines
-                if not line.strip().startswith('include themes/')
-            ]
+    content := strings.Join(newLines, "\n")
+    if err := os.WriteFile(configPath, []byte(content), 0644); err != nil {
+        return fmt.Errorf("failed to write config: %w", err)
+    }
 
-            # Add new theme include
-            new_lines.append(f'include themes/{theme_name}.conf\n')
+    // Reload Kitty if running
+    cmd := exec.Command("pgrep", "kitty")
+    if output, err := cmd.Output(); err == nil && len(output) > 0 {
+        pid := strings.TrimSpace(string(output))
+        exec.Command("kill", "-SIGUSR1", pid).Run()
+    }
 
-            # Write back
-            with open(self.config_path, 'w') as f:
-                f.writelines(new_lines)
+    return nil
+}
+```
 
-            # Reload Kitty if running
-            self._reload_kitty()
+### Register in plugins map:
 
-            return True
-        except FileNotFoundError:
-            print(f"    Error: Config file not found at {self.config_path}")
-            return False
-        except Exception as e:
-            print(f"    Error: {e}")
-            return False
-
-    def _reload_kitty(self) -> None:
-        """Send reload signal to Kitty if running."""
-        try:
-            # Find Kitty process
-            result = subprocess.run(
-                ['pgrep', 'kitty'],
-                capture_output=True,
-                text=True
-            )
-            if result.returncode == 0 and result.stdout.strip():
-                pid = result.stdout.strip().split()[0]
-                # Send SIGUSR1 to reload config
-                subprocess.run(['kill', '-SIGUSR1', pid], check=False)
-        except:
-            # If reload fails, it's okay - user can restart Kitty
-            pass
-
-    def set_light_mode(self) -> bool:
-        """Set Kitty to light theme."""
-        return self._update_theme(self.light_theme)
-
-    def set_dark_mode(self) -> bool:
-        """Set Kitty to dark theme."""
-        return self._update_theme(self.dark_theme)
+```go
+var plugins = map[string]PluginFunc{
+    // ... existing plugins
+    "kitty": kittyPlugin,
+}
 ```
 
 ### Configuration:
@@ -235,222 +191,172 @@ plugins:
     dark_theme: "dark"    # Corresponds to themes/dark.conf
 ```
 
-## Example 3: Slack Desktop
+## Example 3: Alacritty Terminal
 
-**User request:** "Add Slack to the day/night cycle"
+**User request:** "Add Alacritty support"
 
 ### Research findings:
-- Settings location: `~/Library/Application Support/Slack/storage/slack-settings`
-- Format: JSON (actually a state file)
-- Theme property: `theme` (values: "light", "dark", "system")
-- Requires app restart to take effect
+- Settings location: `~/.config/alacritty/alacritty.yml` or `.toml`
+- Theme approach: Import external theme files
+- Can use YAML or TOML format
 
 ### Implementation:
 
-**File:** `day_night_cycle/plugins/slack.py`
+Add to `plugins.go`:
 
-```python
-"""Slack desktop plugin for day/night cycle automation."""
+```go
+func alacrittyPlugin(cfg map[string]interface{}, isLight bool) error {
+    lightTheme, _ := cfg["light_theme"].(string)
+    darkTheme, _ := cfg["dark_theme"].(string)
 
-import json
-from pathlib import Path
-from typing import Optional
-from .base import Plugin
+    if lightTheme == "" {
+        lightTheme = "themes/light.yml"
+    }
+    if darkTheme == "" {
+        darkTheme = "themes/dark.yml"
+    }
 
+    themePath := darkTheme
+    if isLight {
+        themePath = lightTheme
+    }
 
-class SlackPlugin(Plugin):
-    """
-    Plugin to control Slack desktop theme.
+    home, err := os.UserHomeDir()
+    if err != nil {
+        return fmt.Errorf("failed to get home directory: %w", err)
+    }
+    configPath := filepath.Join(home, ".config", "alacritty", "alacritty.yml")
 
-    Note: Slack requires a restart to apply theme changes.
-    """
+    var config map[string]interface{}
+    data, err := os.ReadFile(configPath)
+    if err != nil {
+        return fmt.Errorf("failed to read config: %w", err)
+    }
 
-    def __init__(self, config):
-        super().__init__(config)
-        self.settings_path = Path.home() / 'Library' / 'Application Support' / 'Slack' / 'storage' / 'slack-settings'
+    if err := yaml.Unmarshal(data, &config); err != nil {
+        return fmt.Errorf("failed to parse YAML: %w", err)
+    }
 
-    @property
-    def name(self) -> str:
-        return "slack"
+    // Update import path
+    imports, ok := config["import"].([]interface{})
+    if !ok {
+        imports = []interface{}{}
+    }
 
-    def validate_config(self) -> tuple[bool, Optional[str]]:
-        """Validate Slack settings exist."""
-        if not self.settings_path.exists():
-            return False, f"Slack settings not found at {self.settings_path}"
-        return True, None
+    // Remove old theme imports
+    newImports := []interface{}{}
+    for _, imp := range imports {
+        if impStr, ok := imp.(string); ok {
+            if !strings.Contains(impStr, "themes/") {
+                newImports = append(newImports, imp)
+            }
+        }
+    }
 
-    def _update_theme(self, theme: str) -> bool:
-        """Update Slack theme."""
-        try:
-            # Read current settings
-            with open(self.settings_path, 'r') as f:
-                settings = json.load(f)
+    // Add new theme import
+    newImports = append(newImports, themePath)
+    config["import"] = newImports
 
-            # Update theme
-            if settings.get('theme') == theme:
-                return True
+    updatedData, err := yaml.Marshal(config)
+    if err != nil {
+        return fmt.Errorf("failed to marshal YAML: %w", err)
+    }
 
-            settings['theme'] = theme
+    if err := os.WriteFile(configPath, updatedData, 0644); err != nil {
+        return fmt.Errorf("failed to write config: %w", err)
+    }
 
-            # Write back
-            with open(self.settings_path, 'w') as f:
-                json.dump(settings, f, indent=2)
-
-            print(f"    Note: Please restart Slack to apply theme change")
-            return True
-        except FileNotFoundError:
-            print(f"    Error: Settings file not found")
-            return False
-        except json.JSONDecodeError as e:
-            print(f"    Error: Invalid JSON: {e}")
-            return False
-        except Exception as e:
-            print(f"    Error: {e}")
-            return False
-
-    def set_light_mode(self) -> bool:
-        """Set Slack to light theme."""
-        return self._update_theme('light')
-
-    def set_dark_mode(self) -> bool:
-        """Set Slack to dark theme."""
-        return self._update_theme('dark')
+    return nil
+}
 ```
 
 ### Configuration:
 
 ```yaml
 plugins:
-  - name: slack
+  - name: alacritty
     enabled: true
+    light_theme: "themes/github-light.yml"
+    dark_theme: "themes/github-dark.yml"
 ```
 
-### Note:
-This plugin requires users to restart Slack after the theme change. Consider adding a helper script to automate the restart if needed.
+## Example 4: Sublime Text
 
-## Example 4: Vim/Neovim
-
-**User request:** "Add Vim/Neovim support"
+**User request:** "Add Sublime Text support"
 
 ### Research findings:
-- Settings location: `~/.vimrc` or `~/.config/nvim/init.vim`
-- Theme setting: `colorscheme [name]`
-- No automatic reload (unless using autocmd)
+- Settings location: `~/Library/Application Support/Sublime Text/Packages/User/Preferences.sublime-settings`
+- Theme property: `color_scheme`
+- Auto-reload: Yes
 
 ### Implementation:
 
-**File:** `day_night_cycle/plugins/vim.py`
+Add to `plugins.go`:
 
-```python
-"""Vim/Neovim plugin for day/night cycle automation."""
+```go
+func sublimePlugin(cfg map[string]interface{}, isLight bool) error {
+    lightTheme, _ := cfg["light_theme"].(string)
+    darkTheme, _ := cfg["dark_theme"].(string)
 
-from pathlib import Path
-from typing import Optional
-from .base import Plugin
+    if lightTheme == "" {
+        lightTheme = "Packages/Color Scheme - Default/Breakers.sublime-color-scheme"
+    }
+    if darkTheme == "" {
+        darkTheme = "Packages/Color Scheme - Default/Monokai.sublime-color-scheme"
+    }
 
+    targetTheme := darkTheme
+    if isLight {
+        targetTheme = lightTheme
+    }
 
-class VimPlugin(Plugin):
-    """Plugin to control Vim/Neovim colorscheme."""
+    home, err := os.UserHomeDir()
+    if err != nil {
+        return fmt.Errorf("failed to get home directory: %w", err)
+    }
+    settingsPath := filepath.Join(home, "Library", "Application Support", "Sublime Text", "Packages", "User", "Preferences.sublime-settings")
 
-    def __init__(self, config):
-        super().__init__(config)
-        # Support both Vim and Neovim
-        self.vim_rc = Path.home() / '.vimrc'
-        self.nvim_rc = Path.home() / '.config' / 'nvim' / 'init.vim'
+    var settings map[string]interface{}
+    data, err := os.ReadFile(settingsPath)
+    if err != nil {
+        if os.IsNotExist(err) {
+            settings = make(map[string]interface{})
+        } else {
+            return fmt.Errorf("failed to read settings: %w", err)
+        }
+    } else {
+        if err := json.Unmarshal(data, &settings); err != nil {
+            return fmt.Errorf("failed to parse settings: %w", err)
+        }
+    }
 
-        # Determine which one to use
-        if self.nvim_rc.exists():
-            self.config_path = self.nvim_rc
-        elif self.vim_rc.exists():
-            self.config_path = self.vim_rc
-        else:
-            self.config_path = self.vim_rc  # Default for creation
+    if currentTheme, ok := settings["color_scheme"].(string); ok && currentTheme == targetTheme {
+        return nil
+    }
 
-    @property
-    def name(self) -> str:
-        return "vim"
+    settings["color_scheme"] = targetTheme
 
-    def _update_colorscheme(self, colorscheme: str) -> bool:
-        """Update Vim colorscheme in config file."""
-        try:
-            # Read current config
-            if self.config_path.exists():
-                content = self.config_path.read_text()
-                lines = content.split('\n')
-            else:
-                lines = []
+    updatedData, err := json.MarshalIndent(settings, "", "    ")
+    if err != nil {
+        return fmt.Errorf("failed to marshal settings: %w", err)
+    }
 
-            # Remove old colorscheme lines
-            new_lines = [
-                line for line in lines
-                if not line.strip().startswith('colorscheme ')
-            ]
+    if err := os.WriteFile(settingsPath, updatedData, 0644); err != nil {
+        return fmt.Errorf("failed to write settings: %w", err)
+    }
 
-            # Add new colorscheme
-            new_lines.append(f'colorscheme {colorscheme}')
-
-            # Write back
-            self.config_path.parent.mkdir(parents=True, exist_ok=True)
-            self.config_path.write_text('\n'.join(new_lines))
-
-            print(f"    Note: Restart Vim/Neovim or run :source % to apply")
-            return True
-        except Exception as e:
-            print(f"    Error: {e}")
-            return False
-
-    def set_light_mode(self) -> bool:
-        """Set Vim to light colorscheme."""
-        colorscheme = self.config.get('light_colorscheme', 'morning')
-        return self._update_colorscheme(colorscheme)
-
-    def set_dark_mode(self) -> bool:
-        """Set Vim to dark colorscheme."""
-        colorscheme = self.config.get('dark_colorscheme', 'evening')
-        return self._update_colorscheme(colorscheme)
+    return nil
+}
 ```
 
 ### Configuration:
 
 ```yaml
 plugins:
-  - name: vim
+  - name: sublime
     enabled: true
-    light_colorscheme: "solarized"
-    dark_colorscheme: "gruvbox"
-```
-
-## Helper Script Example
-
-For applications with discoverable themes, create helper scripts:
-
-**File:** `scripts/list_vscode_themes.py`
-
-```python
-#!/usr/bin/env python3
-"""List available VS Code themes."""
-
-import json
-from pathlib import Path
-
-settings_path = Path.home() / 'Library' / 'Application Support' / 'Code' / 'User' / 'settings.json'
-
-if not settings_path.exists():
-    print("VS Code settings not found")
-    exit(1)
-
-with open(settings_path) as f:
-    settings = json.load(f)
-
-current = settings.get('workbench.colorTheme', 'Not set')
-print(f"Current theme: {current}\n")
-print("To see all available themes:")
-print("1. Open VS Code")
-print("2. Press Cmd+K Cmd+T (or Ctrl+K Ctrl+T)")
-print("3. Browse and note the exact theme name")
-print("\nPopular themes:")
-print("  - Light: 'Light+ (default light)', 'GitHub Light', 'Solarized Light'")
-print("  - Dark: 'Dark+ (default dark)', 'GitHub Dark', 'Monokai'")
+    light_theme: "Packages/Theme - GitHub/GitHub-light.tmTheme"
+    dark_theme: "Packages/Theme - GitHub/GitHub-dark.tmTheme"
 ```
 
 ## Common Patterns Observed
@@ -468,17 +374,17 @@ print("  - Dark: 'Dark+ (default dark)', 'GitHub Dark', 'Monokai'")
    - Update specific lines
    - Usually need app restart
 
-4. **State files** (Slack, some apps)
+4. **State files** (some apps)
    - JSON but not traditional settings
    - Often require app restart
 
 ## Tips for Quick Implementation
 
 1. **Start with research** - Don't guess file locations
-2. **Check existing plugins** - Follow established patterns
+2. **Check existing plugins** - Follow established patterns in plugins.go
 3. **Test error cases** - What if file doesn't exist?
-4. **Verify writes** - Did the change actually save?
+4. **Verify writes** - Check if the change actually saved
 5. **Note reload requirements** - Does app need restart?
 6. **Use exact theme names** - Copy from app's UI
 7. **Handle platform differences** - Windows/Linux/macOS paths differ
-8. **Provide helpful errors** - Guide users to fix issues
+8. **Return descriptive errors** - Guide users to fix issues
