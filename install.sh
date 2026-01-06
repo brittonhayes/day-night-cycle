@@ -73,9 +73,27 @@ if [ -z "$SKIP_CONFIG" ]; then
     echo "Find your timezone: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones"
     echo ""
 
-    read -p "Enter your latitude (e.g., 46.0645): " latitude
-    read -p "Enter your longitude (e.g., -118.3430): " longitude
-    read -p "Enter your timezone (e.g., America/Los_Angeles): " timezone
+    # Prompt for required configuration with validation
+    while [ -z "$latitude" ]; do
+        read -p "Enter your latitude (e.g., 46.0645): " latitude
+        if [ -z "$latitude" ]; then
+            echo "Error: Latitude is required"
+        fi
+    done
+
+    while [ -z "$longitude" ]; do
+        read -p "Enter your longitude (e.g., -118.3430): " longitude
+        if [ -z "$longitude" ]; then
+            echo "Error: Longitude is required"
+        fi
+    done
+
+    while [ -z "$timezone" ]; do
+        read -p "Enter your timezone (e.g., America/Los_Angeles): " timezone
+        if [ -z "$timezone" ]; then
+            echo "Error: Timezone is required"
+        fi
+    done
 
     cat > "$INSTALL_DIR/config.yaml" <<EOF
 location:
@@ -113,7 +131,16 @@ fi
 # Generate launchd schedule
 echo ""
 echo "Generating launchd schedule..."
-"$INSTALL_DIR/$BINARY_NAME" --config "$INSTALL_DIR/config.yaml" schedule
+if ! "$INSTALL_DIR/$BINARY_NAME" --config "$INSTALL_DIR/config.yaml" schedule; then
+    echo ""
+    echo "Error: Failed to generate launchd schedule"
+    echo "Please check your configuration file at: $INSTALL_DIR/config.yaml"
+    echo "Make sure all values are properly set (latitude, longitude, timezone)"
+    echo ""
+    echo "You can manually edit the config and run:"
+    echo "  $INSTALL_DIR/$BINARY_NAME --config $INSTALL_DIR/config.yaml schedule"
+    exit 1
+fi
 
 # Load launchd agent
 PLIST_PATH="$HOME/Library/LaunchAgents/com.daynightcycle.schedule.plist"
