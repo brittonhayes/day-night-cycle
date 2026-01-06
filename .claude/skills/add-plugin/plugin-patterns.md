@@ -2,16 +2,66 @@
 
 This guide provides detailed patterns for implementing plugins based on how the target application handles theme configuration.
 
-## Pattern 1: JSON Configuration Files
+## File Structure
+
+Each plugin is implemented as a separate file in the `plugins/` directory:
+- File name: `plugins/[app_name].go` (e.g., `plugins/vscode.go`)
+- Package: `package plugins`
+- Function name: CamelCase matching app name (e.g., `VSCode`)
+
+## Pattern 1: JSON Configuration Files (Using Helper)
 
 **Use when:** Application stores settings in JSON format (e.g., VS Code, Cursor, Claude Code)
 
 **Example applications:** VS Code, Cursor, Sublime Text, many Electron apps
 
-### Template
+### Template (Simple - Using UpdateJSONTheme helper)
 
 ```go
-func [appName]Plugin(cfg map[string]interface{}, isLight bool) error {
+package plugins
+
+import (
+    "os"
+    "path/filepath"
+)
+
+// [AppName] updates [App Name] theme settings.
+func [AppName](cfg map[string]interface{}, isLight bool) error {
+    themeKey := "dark_theme"
+    defaultTheme := "Default Dark"
+    if isLight {
+        themeKey = "light_theme"
+        defaultTheme = "Default Light"
+    }
+
+    theme, ok := cfg[themeKey].(string)
+    if !ok {
+        theme = defaultTheme
+    }
+
+    settingsPath := filepath.Join(
+        os.Getenv("HOME"),
+        "[path to settings.json]",
+    )
+
+    return UpdateJSONTheme(settingsPath, "[theme-property-name]", theme)
+}
+```
+
+### Template (Manual - Full Control)
+
+```go
+package plugins
+
+import (
+    "encoding/json"
+    "fmt"
+    "os"
+    "path/filepath"
+)
+
+// [AppName] updates [App Name] theme settings.
+func [AppName](cfg map[string]interface{}, isLight bool) error {
     // Extract config values
     lightTheme, _ := cfg["light_theme"].(string)
     darkTheme, _ := cfg["dark_theme"].(string)
@@ -96,7 +146,18 @@ func [appName]Plugin(cfg map[string]interface{}, isLight bool) error {
 ### Template
 
 ```go
-func [appName]Plugin(cfg map[string]interface{}, isLight bool) error {
+package plugins
+
+import (
+    "fmt"
+    "os"
+    "path/filepath"
+
+    "gopkg.in/yaml.v3"
+)
+
+// [AppName] updates [App Name] theme settings.
+func [AppName](cfg map[string]interface{}, isLight bool) error {
     lightTheme, _ := cfg["light_theme"].(string)
     darkTheme, _ := cfg["dark_theme"].(string)
 
@@ -164,7 +225,15 @@ func [appName]Plugin(cfg map[string]interface{}, isLight bool) error {
 ### Template
 
 ```go
-func [appName]Plugin(cfg map[string]interface{}, isLight bool) error {
+package plugins
+
+import (
+    "fmt"
+    "os/exec"
+)
+
+// [AppName] updates [App Name] theme via AppleScript.
+func [AppName](cfg map[string]interface{}, isLight bool) error {
     lightPreset, _ := cfg["light_preset"].(string)
     darkPreset, _ := cfg["dark_preset"].(string)
 
@@ -214,7 +283,15 @@ func [appName]Plugin(cfg map[string]interface{}, isLight bool) error {
 ### Template
 
 ```go
-func [appName]Plugin(cfg map[string]interface{}, isLight bool) error {
+package plugins
+
+import (
+    "fmt"
+    "os/exec"
+)
+
+// [AppName] updates [App Name] theme via CLI.
+func [AppName](cfg map[string]interface{}, isLight bool) error {
     lightTheme, _ := cfg["light_theme"].(string)
     darkTheme, _ := cfg["dark_theme"].(string)
 
@@ -249,7 +326,17 @@ func [appName]Plugin(cfg map[string]interface{}, isLight bool) error {
 ### Template
 
 ```go
-func [appName]Plugin(cfg map[string]interface{}, isLight bool) error {
+package plugins
+
+import (
+    "fmt"
+    "os"
+    "path/filepath"
+    "strings"
+)
+
+// [AppName] updates [App Name] theme configuration.
+func [AppName](cfg map[string]interface{}, isLight bool) error {
     lightSetting, _ := cfg["light_setting"].(string)
     darkSetting, _ := cfg["dark_setting"].(string)
 

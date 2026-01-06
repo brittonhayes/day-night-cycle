@@ -14,8 +14,8 @@ This skill helps you add support for new applications to the day/night cycle aut
 
 1. Research how theme switching works for the application
 2. Identify configuration file locations or APIs
-3. Create a plugin function in plugins.go
-4. Register the plugin in the plugins map
+3. Create a new plugin file in the plugins/ directory
+4. Register the plugin in plugins/plugin.go Registry map
 5. Provide configuration examples
 
 ## Instructions
@@ -41,16 +41,21 @@ First, understand how theme switching works for the target application:
 
 ### 2. Implementation Phase
 
-Add the plugin function to `plugins.go`:
+Create a new plugin file in the `plugins/` directory:
 
 **Read existing plugins first:**
 ```bash
-Read: plugins.go
+Read: plugins/iterm2.go  # or any other plugin as example
+Read: plugins/plugin.go  # for helper functions
 ```
+
+**Create new file:** `plugins/[app_name].go`
 
 **Plugin function signature:**
 ```go
-func [appName]Plugin(cfg map[string]interface{}, isLight bool) error {
+package plugins
+
+func [AppName](cfg map[string]interface{}, isLight bool) error {
     // Implementation
 }
 ```
@@ -58,7 +63,8 @@ func [appName]Plugin(cfg map[string]interface{}, isLight bool) error {
 **Implementation patterns by type:**
 
 1. **JSON Config Files:**
-   - Read current file into struct or map
+   - Use helper: `UpdateJSONTheme(path, key, value)` from plugins/plugin.go
+   - Or read current file into struct or map
    - Update theme property
    - Marshal and write back
    - Verify write succeeded
@@ -73,6 +79,10 @@ func [appName]Plugin(cfg map[string]interface{}, isLight bool) error {
    - Check error return values
    - Capture and handle stderr
 
+**Available helpers in plugins/plugin.go:**
+- `UpdateJSONTheme(path, key, value)` - Update JSON config files
+- `ExpandPath(path)` - Expand ~ in file paths
+
 **Error handling requirements:**
 - Return descriptive errors using `fmt.Errorf()`
 - Handle file not found separately from other errors
@@ -80,13 +90,13 @@ func [appName]Plugin(cfg map[string]interface{}, isLight bool) error {
 
 ### 3. Integration Phase
 
-Register the plugin in the plugins map:
+Register the plugin in the Registry:
 
-**Edit `plugins.go`:**
+**Edit `plugins/plugin.go`:**
 ```go
-var plugins = map[string]PluginFunc{
-    // ...
-    "[app-name]": [appName]Plugin,
+var Registry = map[string]Func{
+    // ... existing plugins
+    "[app-name]": [AppName],
 }
 ```
 
@@ -96,13 +106,13 @@ var plugins = map[string]PluginFunc{
 make build
 
 # Test light mode
-./day-night-cycle light
+./bin/day-night-cycle --config config.yaml light
 
 # Test dark mode
-./day-night-cycle dark
+./bin/day-night-cycle --config config.yaml dark
 
 # Check status
-./day-night-cycle status
+./bin/day-night-cycle --config config.yaml status
 ```
 
 ### 4. Documentation Phase
@@ -126,12 +136,13 @@ plugins:
 
 Before completing the task, verify:
 
-- [ ] Plugin function added to `plugins.go`
-- [ ] Function signature matches `PluginFunc` type
+- [ ] New plugin file created in `plugins/` directory (e.g., `plugins/vscode.go`)
+- [ ] File has `package plugins` declaration
+- [ ] Function signature matches `func [AppName](cfg map[string]interface{}, isLight bool) error`
 - [ ] Extracts config values with proper type assertions
 - [ ] Handles both light and dark modes based on `isLight` parameter
 - [ ] Returns descriptive errors
-- [ ] Plugin registered in `plugins` map
+- [ ] Plugin registered in `plugins/plugin.go` Registry map
 - [ ] Configuration example provided
 - [ ] Basic testing completed
 
@@ -143,8 +154,8 @@ Expected workflow:
 1. Research VS Code settings location and theme configuration
 2. Discover settings.json at `~/Library/Application Support/Code/User/settings.json`
 3. Find that theme is controlled by `workbench.colorTheme` property
-4. Create `vscodePlugin` function in `plugins.go`
-5. Register in `plugins` map as "vscode"
+4. Create `plugins/vscode.go` with `VSCode` function
+5. Register in `plugins/plugin.go` Registry map as "vscode"
 6. Provide config example with popular theme names
 7. Test the implementation
 
@@ -158,12 +169,15 @@ Expected workflow:
 
 ## Resources
 
-- Existing plugins: See `plugins.go` for implementation patterns
+- Existing plugins: See files in `plugins/` directory for implementation patterns
+- Plugin helpers: See `plugins/plugin.go` for available helper functions
 - Plugin patterns: See [plugin-patterns.md](plugin-patterns.md) in this skill directory
 
 ## Notes
 
-- Always read existing plugins in plugins.go before implementing
+- Always read existing plugin files in plugins/ directory before implementing
+- Each plugin gets its own file (e.g., `plugins/iterm2.go`)
+- Use helper functions from `plugins/plugin.go` when appropriate
 - Follow the patterns from existing plugins
 - Research thoroughly before implementing
 - Return descriptive errors

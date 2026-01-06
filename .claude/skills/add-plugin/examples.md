@@ -14,10 +14,53 @@ This document shows complete examples of adding plugins for common applications.
 
 ### Implementation:
 
-Add to `plugins.go`:
+Create `plugins/vscode.go`:
 
 ```go
-func vscodePlugin(cfg map[string]interface{}, isLight bool) error {
+package plugins
+
+import (
+    "os"
+    "path/filepath"
+)
+
+// VSCode updates Visual Studio Code theme settings.
+func VSCode(cfg map[string]interface{}, isLight bool) error {
+    themeKey := "dark_theme"
+    defaultTheme := "Dark+ (default dark)"
+    if isLight {
+        themeKey = "light_theme"
+        defaultTheme = "Light+ (default light)"
+    }
+
+    theme, ok := cfg[themeKey].(string)
+    if !ok {
+        theme = defaultTheme
+    }
+
+    settingsPath := filepath.Join(
+        os.Getenv("HOME"),
+        "Library/Application Support/Code/User/settings.json",
+    )
+
+    return UpdateJSONTheme(settingsPath, "workbench.colorTheme", theme)
+}
+```
+
+### Alternate Implementation (Manual):
+
+```go
+package plugins
+
+import (
+    "encoding/json"
+    "fmt"
+    "os"
+    "path/filepath"
+)
+
+// VSCode updates Visual Studio Code theme settings.
+func VSCode(cfg map[string]interface{}, isLight bool) error {
     lightTheme, _ := cfg["light_theme"].(string)
     darkTheme, _ := cfg["dark_theme"].(string)
 
@@ -76,12 +119,12 @@ func vscodePlugin(cfg map[string]interface{}, isLight bool) error {
 }
 ```
 
-### Register in plugins map:
+### Register in plugins/plugin.go:
 
 ```go
-var plugins = map[string]PluginFunc{
+var Registry = map[string]Func{
     // ... existing plugins
-    "vscode": vscodePlugin,
+    "vscode": VSCode,
 }
 ```
 
@@ -99,8 +142,8 @@ plugins:
 ### Testing:
 ```bash
 make build
-./day-night-cycle light  # Should switch VS Code to light theme
-./day-night-cycle dark   # Should switch VS Code to dark theme
+./bin/day-night-cycle --config config.yaml light  # Should switch VS Code to light theme
+./bin/day-night-cycle --config config.yaml dark   # Should switch VS Code to dark theme
 ```
 
 ## Example 2: Kitty Terminal
@@ -115,10 +158,21 @@ make build
 
 ### Implementation:
 
-Add to `plugins.go`:
+Create `plugins/kitty.go`:
 
 ```go
-func kittyPlugin(cfg map[string]interface{}, isLight bool) error {
+package plugins
+
+import (
+    "fmt"
+    "os"
+    "os/exec"
+    "path/filepath"
+    "strings"
+)
+
+// Kitty updates Kitty terminal theme configuration.
+func Kitty(cfg map[string]interface{}, isLight bool) error {
     lightTheme, _ := cfg["light_theme"].(string)
     darkTheme, _ := cfg["dark_theme"].(string)
 
@@ -172,12 +226,12 @@ func kittyPlugin(cfg map[string]interface{}, isLight bool) error {
 }
 ```
 
-### Register in plugins map:
+### Register in plugins/plugin.go:
 
 ```go
-var plugins = map[string]PluginFunc{
+var Registry = map[string]Func{
     // ... existing plugins
-    "kitty": kittyPlugin,
+    "kitty": Kitty,
 }
 ```
 
@@ -202,10 +256,22 @@ plugins:
 
 ### Implementation:
 
-Add to `plugins.go`:
+Create `plugins/alacritty.go`:
 
 ```go
-func alacrittyPlugin(cfg map[string]interface{}, isLight bool) error {
+package plugins
+
+import (
+    "fmt"
+    "os"
+    "path/filepath"
+    "strings"
+
+    "gopkg.in/yaml.v3"
+)
+
+// Alacritty updates Alacritty terminal theme configuration.
+func Alacritty(cfg map[string]interface{}, isLight bool) error {
     lightTheme, _ := cfg["light_theme"].(string)
     darkTheme, _ := cfg["dark_theme"].(string)
 
@@ -291,10 +357,53 @@ plugins:
 
 ### Implementation:
 
-Add to `plugins.go`:
+Create `plugins/sublime.go`:
 
 ```go
-func sublimePlugin(cfg map[string]interface{}, isLight bool) error {
+package plugins
+
+import (
+    "os"
+    "path/filepath"
+)
+
+// Sublime updates Sublime Text theme settings.
+func Sublime(cfg map[string]interface{}, isLight bool) error {
+    themeKey := "dark_theme"
+    defaultTheme := "Packages/Color Scheme - Default/Monokai.sublime-color-scheme"
+    if isLight {
+        themeKey = "light_theme"
+        defaultTheme = "Packages/Color Scheme - Default/Breakers.sublime-color-scheme"
+    }
+
+    theme, ok := cfg[themeKey].(string)
+    if !ok {
+        theme = defaultTheme
+    }
+
+    settingsPath := filepath.Join(
+        os.Getenv("HOME"),
+        "Library/Application Support/Sublime Text/Packages/User/Preferences.sublime-settings",
+    )
+
+    return UpdateJSONTheme(settingsPath, "color_scheme", theme)
+}
+```
+
+### Alternate Implementation (Manual):
+
+```go
+package plugins
+
+import (
+    "encoding/json"
+    "fmt"
+    "os"
+    "path/filepath"
+)
+
+// Sublime updates Sublime Text theme settings.
+func Sublime(cfg map[string]interface{}, isLight bool) error {
     lightTheme, _ := cfg["light_theme"].(string)
     darkTheme, _ := cfg["dark_theme"].(string)
 
@@ -365,6 +474,7 @@ plugins:
    - Most reliable method
    - Usually auto-reload
    - Need exact theme names
+   - **Use `UpdateJSONTheme()` helper from plugins/plugin.go**
 
 2. **Config file includes** (Kitty, Alacritty)
    - Include external theme files
@@ -380,11 +490,14 @@ plugins:
 
 ## Tips for Quick Implementation
 
-1. **Start with research** - Don't guess file locations
-2. **Check existing plugins** - Follow established patterns in plugins.go
-3. **Test error cases** - What if file doesn't exist?
-4. **Verify writes** - Check if the change actually saved
-5. **Note reload requirements** - Does app need restart?
-6. **Use exact theme names** - Copy from app's UI
-7. **Handle platform differences** - Windows/Linux/macOS paths differ
-8. **Return descriptive errors** - Guide users to fix issues
+1. **Create separate file** - Each plugin gets its own file in `plugins/`
+2. **Start with research** - Don't guess file locations
+3. **Check existing plugins** - Follow established patterns in `plugins/` directory
+4. **Use helpers** - `UpdateJSONTheme()` and `ExpandPath()` from `plugins/plugin.go`
+5. **Test error cases** - What if file doesn't exist?
+6. **Verify writes** - Check if the change actually saved
+7. **Note reload requirements** - Does app need restart?
+8. **Use exact theme names** - Copy from app's UI
+9. **Handle platform differences** - Windows/Linux/macOS paths differ
+10. **Return descriptive errors** - Guide users to fix issues
+11. **Register in Registry** - Add to `plugins/plugin.go` Registry map

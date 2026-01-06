@@ -4,40 +4,16 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"path/filepath"
 	"time"
 
-	"gopkg.in/yaml.v3"
+	"github.com/brittonhayes/day-night-cycle/internal"
+	"github.com/brittonhayes/day-night-cycle/plugins"
 )
-
-// Config represents the YAML configuration
-type Config struct {
-	Location LocationConfig `yaml:"location"`
-	Plugins  []PluginConfig `yaml:"plugins"`
-}
-
-// LocationConfig holds geographic location settings
-type LocationConfig struct {
-	Name      string  `yaml:"name"`
-	Latitude  float64 `yaml:"latitude"`
-	Longitude float64 `yaml:"longitude"`
-	Timezone  string  `yaml:"timezone"`
-}
-
-// PluginConfig holds configuration for a single plugin
-type PluginConfig struct {
-	Name    string                 `yaml:"name"`
-	Enabled bool                   `yaml:"enabled"`
-	Config  map[string]interface{} `yaml:",inline"`
-}
-
-// PluginFunc is the signature for all plugin functions
-type PluginFunc func(pluginCfg map[string]interface{}, isLight bool) error
 
 var Version = "dev"
 
 func main() {
-	configPath := flag.String("config", defaultConfigPath(), "path to config file")
+	configPath := flag.String("config", internal.DefaultPath(), "path to config file")
 	flag.Usage = printUsage
 	flag.Parse()
 
@@ -90,34 +66,19 @@ Flags:
 	flag.PrintDefaults()
 }
 
-func defaultConfigPath() string {
-	home, err := os.UserHomeDir()
+func loadConfig(path string) internal.Config {
+	cfg, err := internal.Load(path)
 	if err != nil {
-		return "config.yaml"
-	}
-	return filepath.Join(home, ".config", "day-night-cycle", "config.yaml")
-}
-
-func loadConfig(path string) Config {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error reading config: %v\n", err)
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
-
-	var cfg Config
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		fmt.Fprintf(os.Stderr, "error parsing config: %v\n", err)
-		os.Exit(1)
-	}
-
 	return cfg
 }
 
 func loadLocation(tz string) *time.Location {
-	loc, err := time.LoadLocation(tz)
+	loc, err := internal.LoadLocation(tz)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error loading timezone %s: %v\n", tz, err)
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
 	return loc
@@ -127,7 +88,7 @@ func runAuto(configPath string) {
 	cfg := loadConfig(configPath)
 	loc := loadLocation(cfg.Location.Timezone)
 
-	sunrise, sunset := calculateSolarTimes(
+	sunrise, sunset := internal.CalculateTimes(
 		cfg.Location.Latitude,
 		cfg.Location.Longitude,
 		time.Now().In(loc),
@@ -144,7 +105,7 @@ func runMode(configPath string, isLight bool) {
 	applyMode(cfg, isLight)
 }
 
-func applyMode(cfg Config, isLight bool) {
+func applyMode(cfg internal.Config, isLight bool) {
 	mode := "dark"
 	if isLight {
 		mode = "light"
@@ -159,7 +120,7 @@ func applyMode(cfg Config, isLight bool) {
 			continue
 		}
 
-		pluginFunc, exists := plugins[pluginCfg.Name]
+		pluginFunc, exists := plugins.Registry[pluginCfg.Name]
 		if !exists {
 			fmt.Printf("  ✗ %s: unknown plugin\n", pluginCfg.Name)
 			continue
@@ -183,7 +144,7 @@ func runStatus(configPath string) {
 	loc := loadLocation(cfg.Location.Timezone)
 
 	now := time.Now().In(loc)
-	sunrise, sunset := calculateSolarTimes(
+	sunrise, sunset := internal.CalculateTimes(
 		cfg.Location.Latitude,
 		cfg.Location.Longitude,
 		now,
@@ -209,7 +170,7 @@ func runStatus(configPath string) {
 		kind = "sunset"
 	} else {
 		tomorrow := now.Add(24 * time.Hour)
-		next, _ = calculateSolarTimes(cfg.Location.Latitude, cfg.Location.Longitude, tomorrow)
+		next, _ = internal.CalculateTimes(cfg.Location.Latitude, cfg.Location.Longitude, tomorrow)
 		kind = "sunrise"
 	}
 	fmt.Printf("Next transition: %s (%s)\n", next.Format("3:04 PM"), kind)
@@ -228,7 +189,7 @@ func runNext(configPath string) {
 	loc := loadLocation(cfg.Location.Timezone)
 
 	now := time.Now().In(loc)
-	sunrise, sunset := calculateSolarTimes(
+	sunrise, sunset := internal.CalculateTimes(
 		cfg.Location.Latitude,
 		cfg.Location.Longitude,
 		now,
@@ -244,9 +205,26 @@ func runNext(configPath string) {
 		kind = "sunset"
 	} else {
 		tomorrow := now.Add(24 * time.Hour)
-		next, _ = calculateSolarTimes(cfg.Location.Latitude, cfg.Location.Longitude, tomorrow)
+		next, _ = internal.CalculateTimes(cfg.Location.Latitude, cfg.Location.Longitude, tomorrow)
 		kind = "sunrise"
 	}
 
 	fmt.Printf("Next transition: %s (%s)\n", next.Format("3:04 PM"), kind)
+}
+
+func runSchedule(configPath string) {
+	cfg := loadConfig(configPath)
+	loc := loadLocation(cfg.Location.Timezone)
+
+	now := time.Now().In(loc)
+	sunrise, sunset := internal.CalculateTimes(
+		cfg.Location.Latitude,
+		cfg.Location.Longitude,
+		now,
+	)
+
+	if err := internal.Generate(configPath, sunrise, sunset); err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		os.Exit(1)
+	}
 }

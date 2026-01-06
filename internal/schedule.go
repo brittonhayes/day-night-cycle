@@ -1,4 +1,4 @@
-package main
+package internal
 
 import (
 	"fmt"
@@ -43,55 +43,36 @@ const plistTemplate = `<?xml version="1.0" encoding="UTF-8"?>
 </dict>
 </plist>`
 
-func runSchedule(configPath string) {
-	cfg := loadConfig(configPath)
-	loc := loadLocation(cfg.Location.Timezone)
-
-	now := time.Now().In(loc)
-	sunrise, sunset := calculateSolarTimes(
-		cfg.Location.Latitude,
-		cfg.Location.Longitude,
-		now,
-	)
-
-	// Get binary path
+// Generate creates a launchd plist file for automatic scheduling.
+func Generate(configPath string, sunrise, sunset time.Time) error {
 	binaryPath, err := os.Executable()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error getting executable path: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("getting executable path: %w", err)
 	}
 
-	// Resolve symlinks
 	binaryPath, err = filepath.EvalSymlinks(binaryPath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error resolving symlinks: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("resolving symlinks: %w", err)
 	}
 
-	// Get absolute config path
 	absConfigPath, err := filepath.Abs(configPath)
 	if err != nil {
 		absConfigPath = configPath
 	}
 
-	// Set up paths
 	home, _ := os.UserHomeDir()
 	launchdDir := filepath.Join(home, "Library/LaunchAgents")
 	plistPath := filepath.Join(launchdDir, "com.daynightcycle.schedule.plist")
 	logPath := filepath.Join(filepath.Dir(absConfigPath), "logs")
 
-	// Ensure directories exist
 	if err := os.MkdirAll(launchdDir, 0755); err != nil {
-		fmt.Fprintf(os.Stderr, "error creating LaunchAgents directory: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("creating LaunchAgents directory: %w", err)
 	}
 
 	if err := os.MkdirAll(logPath, 0755); err != nil {
-		fmt.Fprintf(os.Stderr, "error creating logs directory: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("creating logs directory: %w", err)
 	}
 
-	// Prepare template data
 	data := map[string]interface{}{
 		"BinaryPath":    binaryPath,
 		"ConfigPath":    absConfigPath,
@@ -102,27 +83,23 @@ func runSchedule(configPath string) {
 		"LogPath":       logPath,
 	}
 
-	// Parse and execute template
 	tmpl, err := template.New("plist").Parse(plistTemplate)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error parsing template: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("parsing template: %w", err)
 	}
 
 	f, err := os.Create(plistPath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error creating plist file: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("creating plist file: %w", err)
 	}
 	defer f.Close()
 
 	if err := tmpl.Execute(f, data); err != nil {
-		fmt.Fprintf(os.Stderr, "error writing plist: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("writing plist: %w", err)
 	}
 
 	fmt.Printf("\nLaunchd schedule created successfully\n")
-	fmt.Printf("\nSchedule for %s:\n", now.Format("Monday, January 2, 2006"))
+	fmt.Printf("\nSchedule for %s:\n", time.Now().Format("Monday, January 2, 2006"))
 	fmt.Printf("  Sunrise: %s\n", sunrise.Format("3:04 PM"))
 	fmt.Printf("  Sunset:  %s\n", sunset.Format("3:04 PM"))
 	fmt.Printf("\nPlist file: %s\n", plistPath)
@@ -133,4 +110,6 @@ func runSchedule(configPath string) {
 	fmt.Printf("\nTo disable automatic theme switching:\n")
 	fmt.Printf("  launchctl unload %s\n", plistPath)
 	fmt.Println()
+
+	return nil
 }
