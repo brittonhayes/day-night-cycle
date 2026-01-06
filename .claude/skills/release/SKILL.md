@@ -144,25 +144,38 @@ Write minimalist notes following this format:
 
 ### 6. Create GitHub Release
 
-Use the Makefile to create the release:
+Write the release notes to a temporary file, then use the Makefile to create the release:
 
 ```bash
-make release VERSION=v1.3.0
+# Write notes to a file
+cat > /tmp/release-notes.md << 'EOF'
+[One sentence summary of the release]
+
+## Changes
+
+- [User-facing change 1]
+- [User-facing change 2]
+
+## Fixes
+
+- [Bug fix 1]
+EOF
+
+# Create release with custom notes
+make release RELEASE_NOTES=/tmp/release-notes.md
 ```
 
 This will:
+- Build all platform binaries with `make build-all`
 - Upload binaries to GitHub
-- Create release with generated notes
+- Create release with your custom notes from the file
 - Use the tag created earlier
 
-**Alternative:** Pass notes directly to `gh release create`:
+**Without custom notes:**
+If you don't provide `RELEASE_NOTES`, the Makefile falls back to auto-generated notes:
 
 ```bash
-gh release create v1.3.0 \
-  bin/day-night-cycle-darwin-amd64 \
-  bin/day-night-cycle-darwin-arm64 \
-  --title "v1.3.0" \
-  --notes "[Your minimalist notes]"
+make release
 ```
 
 ## Checklist
@@ -177,7 +190,8 @@ Before completing the release:
 - [ ] Created git tag with new version
 - [ ] Pushed tag to origin
 - [ ] Generated minimalist release notes
-- [ ] Created GitHub release with `make release`
+- [ ] Wrote release notes to temporary file
+- [ ] Created GitHub release with `make release RELEASE_NOTES=/tmp/release-notes.md`
 - [ ] Verified release appears on GitHub with binaries
 
 ## Example Workflow
@@ -196,8 +210,9 @@ Expected workflow:
 6. Run `make build-all` to build binaries
 7. Create tag: `git tag -a v1.3.0 -m "Release v1.3.0"`
 8. Push tag: `git push origin v1.3.0`
-9. Generate notes:
-   ```
+9. Write release notes to file:
+   ```bash
+   cat > /tmp/release-notes.md << 'EOF'
    Add Cursor IDE support and fix timezone handling.
 
    ## Changes
@@ -205,8 +220,9 @@ Expected workflow:
 
    ## Fixes
    - Fix timezone handling for negative offsets
+   EOF
    ```
-10. Run `make release` to create GitHub release
+10. Run `make release RELEASE_NOTES=/tmp/release-notes.md` to create GitHub release
 
 ## Common Scenarios
 

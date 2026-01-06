@@ -45,7 +45,7 @@ install: build
 	install -m 755 $(BIN_DIR)/$(BINARY_NAME) $(INSTALL_PATH)/$(BINARY_NAME)
 	@echo "Installed: $(INSTALL_PATH)/$(BINARY_NAME)"
 
-## release: Create GitHub release with binaries
+## release: Create GitHub release with binaries (RELEASE_NOTES=path/to/notes.md optional)
 release: build-all
 	@echo "Creating GitHub release $(VERSION)..."
 	@if [ "$(VERSION)" = "dev" ]; then \
@@ -57,11 +57,19 @@ release: build-all
 		echo "Install it with: brew install gh"; \
 		exit 1; \
 	fi
-	gh release create $(VERSION) \
-		$(BIN_DIR)/$(BINARY_NAME)-darwin-amd64 \
-		$(BIN_DIR)/$(BINARY_NAME)-darwin-arm64 \
-		--title "$(VERSION)" \
-		--generate-notes
+	@if [ -n "$(RELEASE_NOTES)" ] && [ -f "$(RELEASE_NOTES)" ]; then \
+		gh release create $(VERSION) \
+			$(BIN_DIR)/$(BINARY_NAME)-darwin-amd64 \
+			$(BIN_DIR)/$(BINARY_NAME)-darwin-arm64 \
+			--title "$(VERSION)" \
+			--notes-file "$(RELEASE_NOTES)"; \
+	else \
+		gh release create $(VERSION) \
+			$(BIN_DIR)/$(BINARY_NAME)-darwin-amd64 \
+			$(BIN_DIR)/$(BINARY_NAME)-darwin-arm64 \
+			--title "$(VERSION)" \
+			--generate-notes; \
+	fi
 	@echo "Release $(VERSION) created successfully!"
 
 ## clean: Remove built binaries
