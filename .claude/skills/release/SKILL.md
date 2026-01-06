@@ -1,12 +1,12 @@
 ---
 name: release
-description: Analyze changes, determine semantic version bump, build executables, and cut a GitHub release with minimalist notes.
+description: Analyze changes, determine semantic version bump, build executables, and cut a GitHub release with Claude-written minimalist notes.
 allowed-tools: Read, Bash, Grep, Glob
 ---
 
 # Release
 
-Automatically analyze changes, determine semantic versioning, build binaries, and create GitHub releases using the Makefile workflow.
+Automatically analyze changes, determine semantic versioning, build binaries, and create GitHub releases with custom Claude-written release notes.
 
 ## Overview
 
@@ -16,8 +16,9 @@ This skill automates the complete release process:
 2. Determine semantic version bump (major.minor.patch)
 3. Build executables for all platforms using `make build-all`
 4. Create git tag with new version
-5. Generate minimalist release notes
-6. Create GitHub release using `make release`
+5. **Generate minimalist release notes (always written by Claude)**
+6. Write release notes to temporary file
+7. Create GitHub release using `make release RELEASE_NOTES=/tmp/release-notes.md`
 
 ## The Releaser Agent
 
@@ -144,6 +145,8 @@ Write minimalist notes following this format:
 
 ### 6. Create GitHub Release
 
+**CRITICAL: You MUST always write custom release notes. Never use auto-generated notes.**
+
 Write the release notes to a temporary file, then use the Makefile to create the release:
 
 ```bash
@@ -171,12 +174,7 @@ This will:
 - Create release with your custom notes from the file
 - Use the tag created earlier
 
-**Without custom notes:**
-If you don't provide `RELEASE_NOTES`, the Makefile falls back to auto-generated notes:
-
-```bash
-make release
-```
+**IMPORTANT:** Always provide the `RELEASE_NOTES` parameter. The Makefile has a fallback to auto-generated notes, but you must never use it. Claude-written release notes are required for all releases.
 
 ## Checklist
 
@@ -189,10 +187,10 @@ Before completing the release:
 - [ ] Verified build artifacts exist in `bin/`
 - [ ] Created git tag with new version
 - [ ] Pushed tag to origin
-- [ ] Generated minimalist release notes
-- [ ] Wrote release notes to temporary file
-- [ ] Created GitHub release with `make release RELEASE_NOTES=/tmp/release-notes.md`
-- [ ] Verified release appears on GitHub with binaries
+- [ ] **Generated minimalist release notes (REQUIRED)**
+- [ ] **Wrote release notes to /tmp/release-notes.md (REQUIRED)**
+- [ ] **Created GitHub release with `make release RELEASE_NOTES=/tmp/release-notes.md` (REQUIRED)**
+- [ ] Verified release appears on GitHub with binaries and custom release notes
 
 ## Example Workflow
 
@@ -249,6 +247,9 @@ If `BREAKING CHANGE:` found:
 
 ## Notes
 
+- **CRITICAL:** Always generate and use custom release notes - never rely on auto-generated notes
+- Always write release notes to `/tmp/release-notes.md` before running `make release`
+- Always pass `RELEASE_NOTES=/tmp/release-notes.md` to the make release command
 - Always verify the Makefile is being used correctly
 - The `make release` target requires GitHub CLI (`gh`)
 - Never release from a dirty working tree (warn user if uncommitted changes)
