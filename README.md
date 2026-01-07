@@ -23,6 +23,7 @@ curl -fsSL https://raw.githubusercontent.com/brittonhayes/day-night-cycle/main/i
 ```
 
 This will:
+
 - Unload the launchd agent
 - Remove `/usr/local/bin/day-night-cycle`
 - Remove `~/.config/day-night-cycle/` (configuration directory)
@@ -48,6 +49,7 @@ location:
   latitude: 46.0645
   longitude: -118.3430
   timezone: "America/Los_Angeles"
+  dayOffset: "1h"
 
 plugins:
   - name: iterm2
@@ -91,16 +93,6 @@ plugins:
         editor.fontSize: 16
         zenMode.fullScreen: true
         editor.lineHeight: 1.6
-
-  - name: claude-code
-    enabled: true
-    custom:
-      day:
-        theme: "light"
-        editor.fontSize: 13
-      night:
-        theme: "dark"
-        editor.fontSize: 15
 ```
 
 This allows you to change any settings in the application's `settings.json` file based on the time of day, not just the theme.
