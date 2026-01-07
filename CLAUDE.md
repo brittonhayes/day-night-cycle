@@ -210,6 +210,9 @@ location:
   latitude: 46.0645
   longitude: -118.3430
   timezone: "America/Los_Angeles"
+  # Optional: Adjust transition times (negative = earlier, positive = later)
+  # dayOffset: "30m"      # Start day mode 30min after sunrise
+  # nightOffset: "-60m"   # Start night mode 60min before sunset
 
 plugins:
   - name: iterm2
@@ -222,6 +225,29 @@ plugins:
     day: "Light Modern"
     night: "Cursor Dark"
 ```
+
+### Transition time offsets:
+You can offset when day/night transitions occur using Go duration strings:
+- **Negative offset**: Transition happens EARLIER (e.g., `-1h` = 1 hour before)
+- **Positive offset**: Transition happens LATER (e.g., `30m` = 30 minutes after)
+- **Supported units**: `h` (hours), `m` (minutes), `s` (seconds), or combinations like `1h30m`
+
+```yaml
+location:
+  latitude: 46.0645
+  longitude: -118.3430
+  timezone: "America/Los_Angeles"
+  dayOffset: "30m"      # Day mode starts 30 minutes after sunrise
+  nightOffset: "-1h"    # Night mode starts 1 hour before sunset
+
+plugins:
+  - name: cursor
+    enabled: true
+    day: "Light Modern"
+    night: "Cursor Dark"
+```
+
+**Note**: After changing offset values, run `day-night-cycle schedule` again to update the launchd schedule.
 
 ### Arbitrary settings configuration:
 For plugins that use JSON settings files, you can configure arbitrary settings changes using the `custom` field:

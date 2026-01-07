@@ -144,6 +144,9 @@ location:
   latitude: $latitude
   longitude: $longitude
   timezone: "$timezone"
+  # Optional: Adjust when transitions occur (negative = earlier, positive = later)
+  # dayOffset: "30m"      # Start day mode 30min after sunrise
+  # nightOffset: "-1h"    # Start night mode 1 hour before sunset
 
 plugins:
   - name: macos-system

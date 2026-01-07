@@ -100,8 +100,10 @@ func Generate(configPath string, sunrise, sunset time.Time) error {
 
 	displayPlistPath := plistPath
 	displayLogPath := logPath
-	if home != "" {
+	if home != "" && len(plistPath) > len(home) && plistPath[:len(home)] == home {
 		displayPlistPath = filepath.Join("~", plistPath[len(home):])
+	}
+	if home != "" && len(logPath) > len(home) && logPath[:len(home)] == home {
 		displayLogPath = filepath.Join("~", logPath[len(home):])
 	}
 

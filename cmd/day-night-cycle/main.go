@@ -85,6 +85,8 @@ func runAuto(configPath string) {
 		time.Now().In(loc),
 	)
 
+	sunrise, sunset = cfg.Location.ApplyOffsets(sunrise, sunset)
+
 	now := time.Now().In(loc)
 	isLight := now.After(sunrise) && now.Before(sunset)
 
@@ -136,7 +138,7 @@ func applyMode(cfg internal.Config, isLight bool) {
 	fmt.Printf("\nCompleted: %d/%d plugins successful\n", success, total)
 }
 
-func nextTransition(now, sunrise, sunset time.Time, lat, lon float64) (next time.Time, kind string) {
+func nextTransition(now, sunrise, sunset time.Time, loc internal.LocationConfig) (next time.Time, kind string) {
 	if now.Before(sunrise) {
 		return sunrise, "sunrise"
 	}
@@ -144,7 +146,8 @@ func nextTransition(now, sunrise, sunset time.Time, lat, lon float64) (next time
 		return sunset, "sunset"
 	}
 	tomorrow := now.Add(24 * time.Hour)
-	next, _ = internal.CalculateTimes(lat, lon, tomorrow)
+	next, _ = internal.CalculateTimes(loc.Latitude, loc.Longitude, tomorrow)
+	next, _ = loc.ApplyOffsets(next, time.Time{})
 	return next, "sunrise"
 }
 
@@ -168,6 +171,8 @@ func runStatus(configPath string) {
 		now,
 	)
 
+	sunrise, sunset = cfg.Location.ApplyOffsets(sunrise, sunset)
+
 	isLight := now.After(sunrise) && now.Before(sunset)
 	currentMode := "dark"
 	if isLight {
@@ -175,10 +180,20 @@ func runStatus(configPath string) {
 	}
 
 	fmt.Printf("\nCurrent mode: %s\n", currentMode)
-	fmt.Printf("Today's sunrise: %s\n", sunrise.Format("3:04 PM"))
-	fmt.Printf("Today's sunset: %s\n", sunset.Format("3:04 PM"))
 
-	next, kind := nextTransition(now, sunrise, sunset, cfg.Location.Latitude, cfg.Location.Longitude)
+	if cfg.Location.DayOffset != "" {
+		fmt.Printf("Sunrise: %s (offset: %s)\n", sunrise.Format("3:04 PM"), cfg.Location.DayOffset)
+	} else {
+		fmt.Printf("Sunrise: %s\n", sunrise.Format("3:04 PM"))
+	}
+
+	if cfg.Location.NightOffset != "" {
+		fmt.Printf("Sunset: %s (offset: %s)\n", sunset.Format("3:04 PM"), cfg.Location.NightOffset)
+	} else {
+		fmt.Printf("Sunset: %s\n", sunset.Format("3:04 PM"))
+	}
+
+	next, kind := nextTransition(now, sunrise, sunset, cfg.Location)
 	fmt.Printf("Next transition: %s (%s)\n", next.Format("3:04 PM"), kind)
 
 	fmt.Println("\nConfigured plugins:")
@@ -210,7 +225,9 @@ func runNext(configPath string) {
 		now,
 	)
 
-	next, kind := nextTransition(now, sunrise, sunset, cfg.Location.Latitude, cfg.Location.Longitude)
+	sunrise, sunset = cfg.Location.ApplyOffsets(sunrise, sunset)
+
+	next, kind := nextTransition(now, sunrise, sunset, cfg.Location)
 	fmt.Printf("Next transition: %s (%s)\n", next.Format("3:04 PM"), kind)
 }
 
@@ -233,6 +250,8 @@ func runSchedule(configPath string) {
 		cfg.Location.Longitude,
 		now,
 	)
+
+	sunrise, sunset = cfg.Location.ApplyOffsets(sunrise, sunset)
 
 	if err := internal.Generate(configPath, sunrise, sunset); err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
