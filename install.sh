@@ -1,7 +1,8 @@
 #!/bin/bash
 set -e
 
-INSTALL_DIR="$HOME/.config/day-night-cycle"
+CONFIG_DIR="$HOME/.config/day-night-cycle"
+BINARY_INSTALL_DIR="/usr/local/bin"
 BINARY_NAME="day-night-cycle"
 REPO="brittonhayes/day-night-cycle"
 PLIST_PATH="$HOME/Library/LaunchAgents/com.daynightcycle.schedule.plist"
@@ -21,10 +22,17 @@ if [ "$1" = "--uninstall" ]; then
         echo "Removed: $PLIST_PATH"
     fi
 
-    # Remove installation directory
-    if [ -d "$INSTALL_DIR" ]; then
-        echo "Removing installation directory..."
-        rm -rf "$INSTALL_DIR"
+    # Remove binary
+    if [ -f "$BINARY_INSTALL_DIR/$BINARY_NAME" ]; then
+        echo "Removing binary..."
+        rm "$BINARY_INSTALL_DIR/$BINARY_NAME"
+        echo "Removed: $BINARY_INSTALL_DIR/$BINARY_NAME"
+    fi
+
+    # Remove configuration directory
+    if [ -d "$CONFIG_DIR" ]; then
+        echo "Removing configuration directory..."
+        rm -rf "$CONFIG_DIR"
         echo "Removed: ~/.config/day-night-cycle"
     fi
 
@@ -71,22 +79,25 @@ echo ""
 BINARY_URL="https://github.com/$REPO/releases/download/${LATEST_VERSION}/${BINARY_NAME}-${BINARY_SUFFIX}"
 
 # Create config directory
-mkdir -p "$INSTALL_DIR"
+mkdir -p "$CONFIG_DIR"
 
 # Download binary
 echo "Downloading $BINARY_NAME..."
-if ! curl -fsSL "$BINARY_URL" -o "$INSTALL_DIR/$BINARY_NAME"; then
+TEMP_BINARY="/tmp/$BINARY_NAME"
+if ! curl -fsSL "$BINARY_URL" -o "$TEMP_BINARY"; then
     echo "Error: Failed to download binary from $BINARY_URL"
     echo "Please check that the release exists at: https://github.com/$REPO/releases"
     exit 1
 fi
 
-chmod +x "$INSTALL_DIR/$BINARY_NAME"
-echo "Downloaded to: ~/.config/day-night-cycle/$BINARY_NAME"
+# Install binary to /usr/local/bin
+chmod +x "$TEMP_BINARY"
+mv "$TEMP_BINARY" "$BINARY_INSTALL_DIR/$BINARY_NAME"
+echo "Installed to: $BINARY_INSTALL_DIR/$BINARY_NAME"
 echo ""
 
 # Interactive configuration
-if [ -f "$INSTALL_DIR/config.yaml" ]; then
+if [ -f "$CONFIG_DIR/config.yaml" ]; then
     echo "Found existing config.yaml"
     read -p "Do you want to reconfigure? (y/N): " reconfigure </dev/tty
     if [[ ! $reconfigure =~ ^[Yy]$ ]]; then
@@ -127,7 +138,7 @@ if [ -z "$SKIP_CONFIG" ]; then
         fi
     done
 
-    cat > "$INSTALL_DIR/config.yaml" <<EOF
+    cat > "$CONFIG_DIR/config.yaml" <<EOF
 # yaml-language-server: \$schema=https://raw.githubusercontent.com/brittonhayes/day-night-cycle/main/config.schema.json
 location:
   latitude: $latitude
@@ -174,14 +185,14 @@ fi
 # Generate launchd schedule
 echo ""
 echo "Generating launchd schedule..."
-if ! "$INSTALL_DIR/$BINARY_NAME" --config "$INSTALL_DIR/config.yaml" schedule; then
+if ! "$BINARY_NAME" --config "$CONFIG_DIR/config.yaml" schedule; then
     echo ""
     echo "Error: Failed to generate launchd schedule"
     echo "Please check your configuration file at: ~/.config/day-night-cycle/config.yaml"
     echo "Make sure all values are properly set (latitude, longitude, timezone)"
     echo ""
     echo "You can manually edit the config and run:"
-    echo "  ~/.config/day-night-cycle/$BINARY_NAME --config ~/.config/day-night-cycle/config.yaml schedule"
+    echo "  $BINARY_NAME --config ~/.config/day-night-cycle/config.yaml schedule"
     exit 1
 fi
 
@@ -198,12 +209,13 @@ echo "Installation complete!"
 echo "==========================================="
 echo ""
 echo "Commands:"
-echo "  ~/.config/day-night-cycle/$BINARY_NAME auto    # Apply based on current time"
-echo "  ~/.config/day-night-cycle/$BINARY_NAME light   # Force light mode"
-echo "  ~/.config/day-night-cycle/$BINARY_NAME dark    # Force dark mode"
-echo "  ~/.config/day-night-cycle/$BINARY_NAME status  # Show status"
-echo "  ~/.config/day-night-cycle/$BINARY_NAME next    # Show next transition"
+echo "  $BINARY_NAME auto    # Apply based on current time"
+echo "  $BINARY_NAME light   # Force light mode"
+echo "  $BINARY_NAME dark    # Force dark mode"
+echo "  $BINARY_NAME status  # Show status"
+echo "  $BINARY_NAME next    # Show next transition"
 echo ""
+echo "Binary location: $BINARY_INSTALL_DIR/$BINARY_NAME"
 echo "Configuration file: ~/.config/day-night-cycle/config.yaml"
 echo ""
 echo "To uninstall:"

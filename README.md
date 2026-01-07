@@ -24,7 +24,8 @@ curl -fsSL https://raw.githubusercontent.com/brittonhayes/day-night-cycle/main/i
 
 This will:
 - Unload the launchd agent
-- Remove `~/.config/day-night-cycle/`
+- Remove `/usr/local/bin/day-night-cycle`
+- Remove `~/.config/day-night-cycle/` (configuration directory)
 - Remove `~/Library/LaunchAgents/com.daynightcycle.schedule.plist`
 
 ## Supported Plugins
