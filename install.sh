@@ -25,7 +25,7 @@ if [ "$1" = "--uninstall" ]; then
     if [ -d "$INSTALL_DIR" ]; then
         echo "Removing installation directory..."
         rm -rf "$INSTALL_DIR"
-        echo "Removed: $INSTALL_DIR"
+        echo "Removed: ~/.config/day-night-cycle"
     fi
 
     echo ""
@@ -82,7 +82,7 @@ if ! curl -fsSL "$BINARY_URL" -o "$INSTALL_DIR/$BINARY_NAME"; then
 fi
 
 chmod +x "$INSTALL_DIR/$BINARY_NAME"
-echo "Downloaded to: $INSTALL_DIR/$BINARY_NAME"
+echo "Downloaded to: ~/.config/day-night-cycle/$BINARY_NAME"
 echo ""
 
 # Interactive configuration
@@ -100,7 +100,7 @@ if [ -z "$SKIP_CONFIG" ]; then
     echo "Configuration"
     echo "==========================================="
     echo ""
-    echo "Find your coordinates: https://www.latlong.net/"
+    echo "Find your coordinates: https://www.lat-long-coordinates.com/"
     echo "Find your timezone: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones"
     echo ""
 
@@ -130,34 +130,44 @@ if [ -z "$SKIP_CONFIG" ]; then
     cat > "$INSTALL_DIR/config.yaml" <<EOF
 # yaml-language-server: \$schema=https://raw.githubusercontent.com/brittonhayes/day-night-cycle/main/config.schema.json
 location:
-  name: "User Location"
   latitude: $latitude
   longitude: $longitude
   timezone: "$timezone"
 
 plugins:
-  - name: iterm2
-    enabled: true
-    light_preset: "Light Background"
-    dark_preset: "Dark Background"
-
-  - name: claude-code
-    enabled: true
-
-  - name: cursor
-    enabled: true
-    light_theme: "Light Modern"
-    dark_theme: "Cursor Dark"
-
-  - name: neovim
-    enabled: true
-
   - name: macos-system
-    enabled: false
+    enabled: true
+
+  # Uncomment and configure plugins as needed:
+  # - name: iterm2
+  #   enabled: true
+  #   day: "Light Background"
+  #   night: "Dark Background"
+
+  # - name: claude-code
+  #   enabled: true
+
+  # - name: cursor
+  #   enabled: true
+  #   day: "Light Modern"
+  #   night: "Cursor Dark"
+
+  # - name: neovim
+  #   enabled: true
+
+  # - name: sublime
+  #   enabled: true
+  #   day: "Breakers"
+  #   night: "Mariana"
+
+  # - name: pycharm
+  #   enabled: true
+  #   day: "IntelliJ Light"
+  #   night: "Darcula"
 EOF
 
     echo ""
-    echo "Configuration saved to $INSTALL_DIR/config.yaml"
+    echo "Configuration saved to ~/.config/day-night-cycle/config.yaml"
     echo "You can edit this file later to customize plugin settings"
 fi
 
@@ -167,19 +177,20 @@ echo "Generating launchd schedule..."
 if ! "$INSTALL_DIR/$BINARY_NAME" --config "$INSTALL_DIR/config.yaml" schedule; then
     echo ""
     echo "Error: Failed to generate launchd schedule"
-    echo "Please check your configuration file at: $INSTALL_DIR/config.yaml"
+    echo "Please check your configuration file at: ~/.config/day-night-cycle/config.yaml"
     echo "Make sure all values are properly set (latitude, longitude, timezone)"
     echo ""
     echo "You can manually edit the config and run:"
-    echo "  $INSTALL_DIR/$BINARY_NAME --config $INSTALL_DIR/config.yaml schedule"
+    echo "  ~/.config/day-night-cycle/$BINARY_NAME --config ~/.config/day-night-cycle/config.yaml schedule"
     exit 1
 fi
 
 # Load launchd agent
 echo ""
-echo "Loading launchd agent..."
+echo "Setting up automatic scheduling..."
 launchctl unload "$PLIST_PATH" 2>/dev/null || true
 launchctl load "$PLIST_PATH"
+echo "Automatic theme switching enabled"
 
 echo ""
 echo "==========================================="
@@ -187,16 +198,13 @@ echo "Installation complete!"
 echo "==========================================="
 echo ""
 echo "Commands:"
-echo "  $INSTALL_DIR/$BINARY_NAME auto    # Apply based on current time"
-echo "  $INSTALL_DIR/$BINARY_NAME light   # Force light mode"
-echo "  $INSTALL_DIR/$BINARY_NAME dark    # Force dark mode"
-echo "  $INSTALL_DIR/$BINARY_NAME status  # Show status"
-echo "  $INSTALL_DIR/$BINARY_NAME next    # Show next transition"
+echo "  ~/.config/day-night-cycle/$BINARY_NAME auto    # Apply based on current time"
+echo "  ~/.config/day-night-cycle/$BINARY_NAME light   # Force light mode"
+echo "  ~/.config/day-night-cycle/$BINARY_NAME dark    # Force dark mode"
+echo "  ~/.config/day-night-cycle/$BINARY_NAME status  # Show status"
+echo "  ~/.config/day-night-cycle/$BINARY_NAME next    # Show next transition"
 echo ""
-echo "Optional: Add an alias to your shell config (~/.zshrc or ~/.bashrc):"
-echo "  alias dnc='$INSTALL_DIR/$BINARY_NAME --config $INSTALL_DIR/config.yaml'"
-echo ""
-echo "Configuration file: $INSTALL_DIR/config.yaml"
+echo "Configuration file: ~/.config/day-night-cycle/config.yaml"
 echo ""
 echo "To uninstall:"
 echo "  curl -fsSL https://raw.githubusercontent.com/$REPO/main/install.sh | bash -s -- --uninstall"

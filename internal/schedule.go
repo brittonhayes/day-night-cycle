@@ -98,17 +98,19 @@ func Generate(configPath string, sunrise, sunset time.Time) error {
 		return fmt.Errorf("writing plist: %w", err)
 	}
 
+	displayPlistPath := plistPath
+	displayLogPath := logPath
+	if home != "" {
+		displayPlistPath = filepath.Join("~", plistPath[len(home):])
+		displayLogPath = filepath.Join("~", logPath[len(home):])
+	}
+
 	fmt.Printf("\nLaunchd schedule created successfully\n")
 	fmt.Printf("\nSchedule for %s:\n", time.Now().Format("Monday, January 2, 2006"))
 	fmt.Printf("  Sunrise: %s\n", sunrise.Format("3:04 PM"))
 	fmt.Printf("  Sunset:  %s\n", sunset.Format("3:04 PM"))
-	fmt.Printf("\nPlist file: %s\n", plistPath)
-	fmt.Printf("Logs directory: %s\n", logPath)
-	fmt.Printf("\nTo enable automatic theme switching:\n")
-	fmt.Printf("  launchctl unload %s 2>/dev/null || true\n", plistPath)
-	fmt.Printf("  launchctl load %s\n", plistPath)
-	fmt.Printf("\nTo disable automatic theme switching:\n")
-	fmt.Printf("  launchctl unload %s\n", plistPath)
+	fmt.Printf("\nPlist file: %s\n", displayPlistPath)
+	fmt.Printf("Logs directory: %s\n", displayLogPath)
 	fmt.Println()
 
 	return nil
